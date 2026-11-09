@@ -90,10 +90,12 @@ namespace SeaSim.Fish
         [ReadOnly] public NativeArray<float3> velocities;
         [ReadOnly] public NativeArray<float> scales;
         [ReadOnly] public NativeArray<float> panic;
+        [ReadOnly] public NativeArray<int> species;
         [WriteOnly] public NativeArray<float3> sortedPositions;
         [WriteOnly] public NativeArray<float3> sortedVelocities;
         [WriteOnly] public NativeArray<float> sortedScales;
         [WriteOnly] public NativeArray<float> sortedPanic;
+        [WriteOnly] public NativeArray<int> sortedSpecies;
 
         public void Execute(int t)
         {
@@ -102,6 +104,7 @@ namespace SeaSim.Fish
             sortedVelocities[t] = velocities[i];
             sortedScales[t] = scales[i];
             sortedPanic[t] = panic[i];
+            sortedSpecies[t] = species[i];
         }
     }
 }

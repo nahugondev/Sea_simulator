@@ -23,6 +23,12 @@ namespace SeaSim.Fish
             halfHeight = 0.115f, halfWidth = 0.055f, bodyEnd = 0.86f, tailSize = 1.2f, dorsalFinSize = 1f,
         };
 
+        /// <summary>Spindle-shaped, rounder in section than a sardine, with a large forked tail.</summary>
+        public static FishBodyShape Mackerel => new FishBodyShape
+        {
+            halfHeight = 0.085f, halfWidth = 0.062f, bodyEnd = 0.87f, tailSize = 1.6f, dorsalFinSize = 0.8f,
+        };
+
         public static FishBodyShape Predator => new FishBodyShape
         {
             halfHeight = 0.075f, halfWidth = 0.05f, bodyEnd = 0.88f, tailSize = 1.9f, dorsalFinSize = 1.4f,

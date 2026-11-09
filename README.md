@@ -13,7 +13,7 @@ Créer une scène sous-marine vivante et crédible, étape par étape, pour un p
 
 ## Avancement
 
-- [x] **Bancs de poissons** : des milliers d'individus qui nagent en groupe et fuient un prédateur (architecture prête pour plusieurs espèces)
+- [x] **Bancs de poissons** : des milliers de sardines et de maquereaux qui nagent en bancs séparés et fuient un prédateur
 - [ ] **Fond marin** : relief naturel, comme façonné par le temps (érosion)
 - [ ] **Vie sur le fond** : coraux, roches, relief
 - [ ] **Ambiance sous-marine** : eau trouble, distorsion, rayons de lumière
@@ -26,8 +26,12 @@ Créer une scène sous-marine vivante et crédible, étape par étape, pour un p
 - **Limites physiques** : rayon de virage minimal lié à la taille du corps, vitesse de croisière propre à chaque poisson
 - **Nage « battement puis glisse »** : la queue bat plus vite quand le poisson accélère et se calme quand il glisse
 - **Prédateur et fuite** : un prédateur chasse ; les poissons proches fuient sur les côtés, l'alerte se propage de voisin en voisin et le banc s'ouvre autour de lui
-- **Plusieurs espèces possibles** : chaque espèce est un asset `FishSpecies` (forme, taille, nage, comportement)
-- Calcul en parallèle avec le **C# Job System** et **Burst**
+- **Plusieurs espèces** (sardines et maquereaux pour l'instant) :
+  - aucun poisson n'en traverse un autre, quelle que soit son espèce ;
+  - un banc ne contient qu'une seule espèce : deux bancs de la même espèce peuvent fusionner, deux bancs d'espèces différentes s'évitent ou se croisent ;
+  - l'alerte face au prédateur passe d'une espèce à l'autre ;
+  - ajouter une espèce ne demande pas de code : un asset `FishSpecies` (forme, taille, couleurs, nage, comportement) et un `FishSchool` dans la scène
+- Calcul en parallèle avec le **C# Job System** et **Burst**, avec une grille spatiale triée pour trouver les voisins rapidement
 - Affichage de tous les poissons en quelques appels grâce au **GPU instancing**
 - Nage animée directement dans le shader, pilotée par la simulation
 - Poissons générés par le code, sans modèle 3D externe
@@ -36,4 +40,4 @@ Créer une scène sous-marine vivante et crédible, étape par étape, pour un p
 
 **Caméra :** clic droit pour regarder, ZQSD pour se déplacer, A/E pour descendre/monter, Maj pour accélérer, molette pour régler la vitesse.
 
-Le nombre de poissons se règle sur l'objet `FishSchool` de la scène. Leur apparence et leur comportement se règlent dans l'asset d'espèce (`Assets/Simulation/Fish/Species/Sardine.asset`), et le prédateur sur l'objet `Predator`.
+Les bancs sont regroupés sous l'objet `FishSchools` de la scène : chaque `FishSchool` définit une espèce, un nombre de poissons et une zone de nage. L'apparence et le comportement de chaque espèce se règlent dans son asset (`Assets/Simulation/Fish/Species/`), et le prédateur sur l'objet `Predator`.
