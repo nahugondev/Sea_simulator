@@ -1,6 +1,11 @@
 // Instanced fish shader for URP.
 // - Swimming: a travelling sine wave is applied in the vertex shader. Its amplitude grows from head to tail
-//   (UV0.x = 0 at the nose, 1 at the tail), and each instance gets its own phase/frequency from its instance ID.
+//   (UV0.x = 0 at the nose, 1 at the tail).
+//   * Instanced (FishSchool): the tail phase and effort of each fish come from the simulation, through the
+//     _FishSwimState StructuredBuffer, so the tail beat follows the fish's speed (burst and glide).
+//     Only use GPU instancing with this shader through FishSchool, which binds that buffer.
+//   * Not instanced (e.g. FishPredator): _SwimState = (phase, effort, useIt, 0) set from a MaterialPropertyBlock;
+//     when _SwimState.z is 0 the tail simply beats at _SwimFrequency.
 // - Counter-shading: dark back, silvery belly (UV0.y = -1 belly .. +1 back), with a fresnel sheen.
 Shader "SeaSim/FishInstanced"
 {
@@ -13,10 +18,11 @@ Shader "SeaSim/FishInstanced"
         _Sheen ("Silver Sheen", Range(0, 4)) = 2.0
 
         [Header(Swimming)]
-        _SwimFrequency ("Tail Beats Per Second", Float) = 2.2
+        _SwimFrequency ("Tail Beats Per Second (fallback)", Float) = 2.2
         _SwimAmplitude ("Tail Amplitude", Float) = 0.07
         _HeadAmplitude ("Head Amplitude", Float) = 0.012
         _WaveCount ("Waves Along Body", Float) = 0.9
+        [HideInInspector] _SwimState ("Swim State (phase, effort, enabled)", Vector) = (0, 1, 0, 0)
     }
 
     SubShader
@@ -36,33 +42,46 @@ Shader "SeaSim/FishInstanced"
             float _SwimAmplitude;
             float _HeadAmplitude;
             float _WaveCount;
+            float4 _SwimState;
         CBUFFER_END
 
-        float Hash11(float n) { return frac(sin(n * 12.9898) * 43758.5453); }
+        #if defined(UNITY_INSTANCING_ENABLED)
+            StructuredBuffer<float4> _FishSwimState; // per fish: x = tail phase (rad), y = effort (0..1)
+            float _FishInstanceOffset;               // first fish of the current draw batch
+        #endif
 
-        float InstanceSeed()
+        // Tail phase (radians) and effort (amplitude multiplier, low while gliding).
+        void GetSwimState(out float phase, out float effort)
         {
         #if defined(UNITY_INSTANCING_ENABLED)
-            return (float)unity_InstanceID;
+            float4 state = _FishSwimState[unity_InstanceID + (uint)_FishInstanceOffset];
+            phase = state.x;
+            effort = state.y;
         #else
-            // Non-instanced fallback: derive something from the object position.
-            return dot(UNITY_MATRIX_M._m03_m13_m23, float3(1.0, 7.0, 13.0));
+            if (_SwimState.z > 0.5)
+            {
+                phase = _SwimState.x;
+                effort = _SwimState.y;
+            }
+            else
+            {
+                phase = _Time.y * 6.2831853 * _SwimFrequency;
+                effort = 1.0;
+            }
         #endif
         }
 
         // Bends the fish sideways (object-space X) with a wave travelling from head to tail.
         void Swim(inout float3 positionOS, inout float3 normalOS, float s)
         {
-            float seed = InstanceSeed();
-            float phase = Hash11(seed) * 6.2831853;
-            float freq = _SwimFrequency * lerp(0.8, 1.25, Hash11(seed + 17.0));
+            float phase, effort;
+            GetSwimState(phase, effort);
 
             float k = 6.2831853 * _WaveCount;
-            float w = 6.2831853 * freq;
-            float arg = k * s - w * _Time.y + phase;
+            float arg = k * s - phase;
 
-            float envelope = lerp(_HeadAmplitude, _SwimAmplitude, s * s);
-            float dEnvelope = (_SwimAmplitude - _HeadAmplitude) * 2.0 * s;
+            float envelope = lerp(_HeadAmplitude, _SwimAmplitude, s * s) * effort;
+            float dEnvelope = (_SwimAmplitude - _HeadAmplitude) * 2.0 * s * effort;
 
             positionOS.x += envelope * sin(arg);
 
@@ -90,6 +109,7 @@ Shader "SeaSim/FishInstanced"
             Cull Back
 
             HLSLPROGRAM
+            #pragma target 4.5
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing
@@ -171,6 +191,7 @@ Shader "SeaSim/FishInstanced"
             ZWrite On ZTest LEqual ColorMask 0 Cull Back
 
             HLSLPROGRAM
+            #pragma target 4.5
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing
@@ -215,6 +236,7 @@ Shader "SeaSim/FishInstanced"
             ZWrite On ColorMask R Cull Back
 
             HLSLPROGRAM
+            #pragma target 4.5
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing
@@ -239,6 +261,7 @@ Shader "SeaSim/FishInstanced"
             ZWrite On Cull Back
 
             HLSLPROGRAM
+            #pragma target 4.5
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_instancing

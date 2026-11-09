@@ -400,6 +400,69 @@ MonoBehaviour:
   m_ShadowLayerMask: 1
   m_RenderingLayers: 1
   m_ShadowRenderingLayers: 1
+--- !u!1 &617452876
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 617452878}
+  - component: {fileID: 617452877}
+  m_Layer: 0
+  m_Name: Predator
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &617452877
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 617452876}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6ca05a96dbee8b74e9d9c76a83b3ec1d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: SeaSim.Simulation::SeaSim.Fish.FishPredator
+  material: {fileID: 2100000, guid: 50c9d3683f4bbe5419bc9e043a3e775d, type: 2}
+  bodyShape:
+    halfHeight: 0.075
+    halfWidth: 0.05
+    bodyEnd: 0.88
+    tailSize: 1.9
+    dorsalFinSize: 1.4
+  length: 1.2
+  cruiseSpeed: 1.2
+  attackSpeed: 5
+  acceleration: 4
+  turnRadius: {x: 3, y: 1.5}
+  strideLength: 0.8
+  detectionRange: 15
+  restTime: {x: 4, y: 9}
+  maxChaseTime: 3.5
+  catchDistance: 0.5
+  territory: {fileID: 1522496639}
+  fallbackTerritorySize: {x: 40, y: 12, z: 40}
+--- !u!4 &617452878
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 617452876}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0.38268346, z: 0, w: 0.9238795}
+  m_LocalPosition: {x: -15, y: 0, z: -15}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &832575517
 GameObject:
   m_ObjectHideFlags: 0
@@ -478,32 +541,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 807852ff0d9320e4f8c99fdfc4ecc493, type: 3}
   m_Name: 
   m_EditorClassIdentifier: SeaSim.Simulation::SeaSim.Fish.FishSchool
-  fishCount: 1500
+  species: {fileID: 11400000, guid: 2e9c12cecb6108740b56afe12ec8ef19, type: 2}
+  fishCount: 10000
   seed: 12345
   spawnClusters: 6
-  fishMaterial: {fileID: 2100000, guid: 1305b7756c67706469a5285ce1140f8a, type: 2}
-  fishLength: 0.3
-  sizeVariation: 0.2
-  castShadows: 1
   volumeSize: {x: 40, y: 12, z: 40}
   volumeMargin: 4
-  settings:
-    minSpeed: 2
-    maxSpeed: 4.5
-    maxSteerForce: 7
-    perceptionRadius: 2.2
-    fieldOfView: 290
-    maxNeighbours: 14
-    maxCandidates: 96
-    bodyRadius: 0.09
-    personalSpace: 0.8
-    collisionStiffness: 0.9
-    separationWeight: 3.5
-    alignmentWeight: 1.3
-    cohesionWeight: 0.7
-    wanderWeight: 0.6
-    levelingWeight: 0.8
-    boundsWeight: 3
+  castShadows: 1
 --- !u!4 &1522496640
 Transform:
   m_ObjectHideFlags: 0
@@ -527,3 +571,4 @@ SceneRoots:
   - {fileID: 410087041}
   - {fileID: 832575519}
   - {fileID: 1522496640}
+  - {fileID: 617452878}
