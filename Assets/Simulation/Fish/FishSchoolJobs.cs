@@ -14,12 +14,10 @@ namespace SeaSim.Fish
         public float length;
     }
 
-    static class SpatialGrid
+    static class SearchOrder
     {
-        public static int3 Cell(float3 p, float invCellSize) => (int3)math.floor(p * invCellSize);
-        public static int Hash(int3 cell) => (int)math.hash(cell);
-        /// <summary>Maps 0,1,2 to 0,-1,+1 so the fish's own cell is visited first.</summary>
-        public static int Order(int k) => k == 0 ? 0 : (k == 1 ? -1 : 1);
+        /// <summary>Maps 0,1,2,3,4,... to 0,-1,+1,-2,+2,... so the closest rows of cells are visited first.</summary>
+        public static int Offset(int k) => k == 0 ? 0 : ((k + 1) / 2) * ((k & 1) == 1 ? -1 : 1);
     }
 
     static class Capsule
@@ -45,24 +43,12 @@ namespace SeaSim.Fish
         }
     }
 
-    /// <summary>Inserts every fish into a spatial hash so neighbour queries only look at 27 cells.</summary>
-    [BurstCompile]
-    struct HashPositionsJob : IJobParallelFor
-    {
-        [ReadOnly] public NativeArray<float3> positions;
-        public float invCellSize;
-        public NativeParallelMultiHashMap<int, int>.ParallelWriter grid;
-
-        public void Execute(int i)
-        {
-            grid.Add(SpatialGrid.Hash(SpatialGrid.Cell(positions[i], invCellSize)), i);
-        }
-    }
-
     /// <summary>
     /// Decides where each fish wants to go and how fast (it does not move it: see <see cref="MotionJob"/>).
-    /// - Topological schooling: alignment / cohesion use the k nearest visible neighbours, found with a two-scale
-    ///   search (fine grid first, coarse grid only when the fish is in a sparse area).
+    /// - Runs in sorted order (see <see cref="GridLayout"/>): fish s reads its own data and its neighbours' data
+    ///   from the sorted arrays, and writes its results at its original index order[s].
+    /// - Topological schooling: alignment / cohesion use the k nearest visible neighbours. Pass 1 scans the 27 cells
+    ///   around the fish; only fish in a sparse area that still lack neighbours scan wider rings of cells (pass 2).
     /// - Bodies are capsules: separation uses the real distance between bodies, and overlaps are pushed apart.
     /// - Predators: fish that see one flee sideways ('fountain effect'), and panic spreads from neighbour to
     ///   neighbour, so an escape wave travels through the school.
@@ -70,38 +56,41 @@ namespace SeaSim.Fish
     [BurstCompile(FloatMode = FloatMode.Fast)]
     struct SteerJob : IJobParallelFor
     {
-        [ReadOnly] public NativeArray<float3> positions;
-        [ReadOnly] public NativeArray<float3> velocities;
-        [ReadOnly] public NativeArray<float> scales;
+        [ReadOnly] public NativeArray<int> order;
+        [ReadOnly] public NativeArray<int> cellStart;
+        [ReadOnly] public NativeArray<float3> sortedPositions;
+        [ReadOnly] public NativeArray<float3> sortedVelocities;
+        [ReadOnly] public NativeArray<float> sortedScales;
+        [ReadOnly] public NativeArray<float> sortedPanic;
         [ReadOnly] public NativeArray<float> cruiseSpeeds;
-        [ReadOnly] public NativeArray<float> panic;
         [ReadOnly] public NativeArray<PredatorState> predators;
-        [ReadOnly] public NativeParallelMultiHashMap<int, int> grid;
-        [ReadOnly] public NativeParallelMultiHashMap<int, int> collisionGrid;
 
-        [WriteOnly] public NativeArray<float3> desiredDirections;
-        [WriteOnly] public NativeArray<float> desiredSpeeds;
-        [WriteOnly] public NativeArray<float3> corrections;
-        [WriteOnly] public NativeArray<float> newPanic;
+        // Indexed by original fish index (order[s]), hence not by the job index.
+        [WriteOnly, NativeDisableParallelForRestriction] public NativeArray<float3> desiredDirections;
+        [WriteOnly, NativeDisableParallelForRestriction] public NativeArray<float> desiredSpeeds;
+        [WriteOnly, NativeDisableParallelForRestriction] public NativeArray<float3> corrections;
+        [WriteOnly, NativeDisableParallelForRestriction] public NativeArray<float> newPanic;
 
+        public GridLayout layout;
+        [Tooltip("Cells to scan on each side in pass 1; the cell size is the body reach divided by this value.")]
+        public int nearCells;
         public BoidSettings boids;
         public SwimSettings swim;
         public EscapeSettings escape;
-        public float invCellSize;
-        public float collisionCellSize;
         public float3 boundsCenter;
         public float3 boundsExtents;
         public float boundsMargin;
         public float time;
         public float deltaTime;
 
-        public void Execute(int i)
+        public void Execute(int s)
         {
-            float3 p = positions[i];
-            float3 v = velocities[i];
+            int i = order[s];
+            float3 p = sortedPositions[s];
+            float3 v = sortedVelocities[s];
             float speed = math.length(v);
             float3 forward = speed > 1e-5f ? v / speed : new float3(0, 0, 1);
-            float lengthI = scales[i];
+            float lengthI = sortedScales[s];
             float3 halfSegI = forward * (0.5f * Capsule.SegmentFraction * lengthI);
             float cosHalfFov = math.cos(math.radians(boids.fieldOfView * 0.5f));
             int k = math.clamp(boids.topologicalNeighbours, 1, 16);
@@ -110,54 +99,72 @@ namespace SeaSim.Fish
             var neighbourDistSq = new FixedList128Bytes<float>();
             float3 separation = 0, correction = 0;
 
-            // ---- Pass 1, fine grid: body avoidance (all around) + nearest visible neighbours ----
-            float fineRadiusSq = collisionCellSize * collisionCellSize;
-            float invFine = 1f / collisionCellSize;
-            int3 fineCell = SpatialGrid.Cell(p, invFine);
+            // ---- Pass 1, the cells within body reach: body avoidance (all around) + nearest visible neighbours ----
+            // Cells are numbered x first, so each (y, z) row of cells is one contiguous range of sorted fish.
+            int R = nearCells;
+            float nearRadius = layout.cellSize * R;
+            float nearRadiusSq = nearRadius * nearRadius;
+            float perceptionSq = boids.perceptionRadius * boids.perceptionRadius;
+            int3 cell = layout.CellCoord(p);
             int candidates = 0;
-            for (int x = 0; x < 3 && candidates < boids.maxCandidates; x++)
-            for (int y = 0; y < 3 && candidates < boids.maxCandidates; y++)
-            for (int z = 0; z < 3 && candidates < boids.maxCandidates; z++)
+            int rows = 2 * R + 1;
+            for (int zi = 0; zi < rows && candidates < boids.maxCandidates; zi++)
+            for (int yi = 0; yi < rows && candidates < boids.maxCandidates; yi++)
             {
-                int3 c = fineCell + new int3(SpatialGrid.Order(x), SpatialGrid.Order(y), SpatialGrid.Order(z));
-                if (!collisionGrid.TryGetFirstValue(SpatialGrid.Hash(c), out int j, out var it)) continue;
-                do
+                int y = cell.y + SearchOrder.Offset(yi), z = cell.z + SearchOrder.Offset(zi);
+                if (y < 0 || y >= layout.dims.y || z < 0 || z >= layout.dims.z) continue;
+                int xMin = math.max(cell.x - R, 0), xMax = math.min(cell.x + R, layout.dims.x - 1);
+                int end = cellStart[layout.Flatten(new int3(xMax, y, z)) + 1];
+                for (int t = cellStart[layout.Flatten(new int3(xMin, y, z))]; t < end && candidates < boids.maxCandidates; t++)
                 {
-                    if (j == i) continue;
-                    float3 offset = positions[j] - p;
+                    if (t == s) continue;
+                    float3 offset = sortedPositions[t] - p;
                     float distSq = math.lengthsq(offset);
-                    if (distSq > fineRadiusSq || distSq < 1e-10f) continue;
-                    candidates++;
-
-                    AvoidBody(i, j, p, halfSegI, lengthI, offset, distSq, ref separation, ref correction);
-                    if (CanEnter(ref neighbourDistSq, k, distSq) && IsVisible(forward, offset, distSq, cosHalfFov))
-                        InsertNearest(ref neighbourIds, ref neighbourDistSq, k, j, distSq);
-                } while (candidates < boids.maxCandidates && collisionGrid.TryGetNextValue(out j, ref it));
+                    if (distSq < 1e-10f) continue;
+                    if (distSq <= nearRadiusSq)
+                    {
+                        candidates++;
+                        AvoidBody(t, p, halfSegI, lengthI, offset, distSq, ref separation, ref correction);
+                    }
+                    // Every fish of these cells is a neighbour candidate (pass 2 only looks at cells further out).
+                    if (distSq <= perceptionSq && CanEnter(ref neighbourDistSq, k, distSq) && IsVisible(forward, offset, distSq, cosHalfFov))
+                        InsertNearest(ref neighbourIds, ref neighbourDistSq, k, t, distSq);
+                }
             }
 
-            // ---- Pass 2, coarse grid: only for fish in a sparse area that still lack neighbours ----
+            // ---- Pass 2, wider rings of cells: only for fish in a sparse area that still lack neighbours ----
             if (neighbourIds.Length < k)
             {
-                float perceptionSq = boids.perceptionRadius * boids.perceptionRadius;
-                int3 cell = SpatialGrid.Cell(p, invCellSize);
+                int maxRing = math.min((int)math.ceil(boids.perceptionRadius * layout.invCellSize), R + 6);
                 int scanned = 0;
-                for (int x = 0; x < 3 && scanned < boids.maxCandidates; x++)
-                for (int y = 0; y < 3 && scanned < boids.maxCandidates; y++)
-                for (int z = 0; z < 3 && scanned < boids.maxCandidates; z++)
+                for (int r = R + 1; r <= maxRing && neighbourIds.Length < k && scanned < boids.maxCandidates * 4; r++)
                 {
-                    int3 c = cell + new int3(SpatialGrid.Order(x), SpatialGrid.Order(y), SpatialGrid.Order(z));
-                    if (!grid.TryGetFirstValue(SpatialGrid.Hash(c), out int j, out var it)) continue;
-                    do
+                    for (int dz = -r; dz <= r; dz++)
+                    for (int dy = -r; dy <= r; dy++)
                     {
-                        if (j == i) continue;
-                        float3 offset = positions[j] - p;
-                        float distSq = math.lengthsq(offset);
-                        // Fish within the fine radius were already considered in pass 1.
-                        scanned++; // every visited entry counts, so the cost stays bounded in dense areas
-                        if (distSq <= fineRadiusSq || distSq > perceptionSq) continue;
-                        if (CanEnter(ref neighbourDistSq, k, distSq) && IsVisible(forward, offset, distSq, cosHalfFov))
-                            InsertNearest(ref neighbourIds, ref neighbourDistSq, k, j, distSq);
-                    } while (scanned < boids.maxCandidates && grid.TryGetNextValue(out j, ref it));
+                        int y = cell.y + dy, z = cell.z + dz;
+                        if (y < 0 || y >= layout.dims.y || z < 0 || z >= layout.dims.z) continue;
+                        bool shellRow = math.abs(dy) == r || math.abs(dz) == r;
+                        // On a shell row the whole x range is new; otherwise only the two end cells are.
+                        for (int side = 0; side < (shellRow ? 1 : 2); side++)
+                        {
+                            int xMin = shellRow ? cell.x - r : (side == 0 ? cell.x - r : cell.x + r);
+                            int xMax = shellRow ? cell.x + r : xMin;
+                            xMin = math.max(xMin, 0);
+                            xMax = math.min(xMax, layout.dims.x - 1);
+                            if (xMin > xMax) continue;
+                            int end = cellStart[layout.Flatten(new int3(xMax, y, z)) + 1];
+                            for (int t = cellStart[layout.Flatten(new int3(xMin, y, z))]; t < end; t++)
+                            {
+                                scanned++;
+                                float3 offset = sortedPositions[t] - p;
+                                float distSq = math.lengthsq(offset);
+                                if (distSq > perceptionSq) continue;
+                                if (CanEnter(ref neighbourDistSq, k, distSq) && IsVisible(forward, offset, distSq, cosHalfFov))
+                                    InsertNearest(ref neighbourIds, ref neighbourDistSq, k, t, distSq);
+                            }
+                        }
+                    }
                 }
             }
 
@@ -167,13 +174,13 @@ namespace SeaSim.Fish
             int count = neighbourIds.Length;
             for (int n = 0; n < count; n++)
             {
-                int j = neighbourIds[n];
-                float3 vj = velocities[j];
+                int t = neighbourIds[n];
+                float3 vj = sortedVelocities[t];
                 float sj = math.length(vj);
                 alignment += sj > 1e-5f ? vj / sj : 0f;
-                cohesion += positions[j];
+                cohesion += sortedPositions[t];
                 neighbourSpeed += sj;
-                neighbourPanic = math.max(neighbourPanic, panic[j]);
+                neighbourPanic = math.max(neighbourPanic, sortedPanic[t]);
             }
 
             // ---- Predators: direct detection + 'fountain' escape direction ----
@@ -197,7 +204,7 @@ namespace SeaSim.Fish
             }
 
             // ---- Panic: rises fast when threatened or when neighbours panic, fades slowly ----
-            float oldPanic = panic[i];
+            float oldPanic = sortedPanic[s];
             float target = math.max(alarm, neighbourPanic * escape.alarmTransmission);
             float p01 = target > oldPanic
                 ? math.lerp(oldPanic, target, math.saturate(deltaTime * escape.alarmSpreadRate))
@@ -250,16 +257,17 @@ namespace SeaSim.Fish
             corrections[i] = ClampLength(correction * boids.collisionStiffness, boids.bodyRadius * lengthI);
         }
 
-        void AvoidBody(int i, int j, float3 p, float3 halfSegI, float lengthI, float3 offset, float distSq,
+        /// <param name="t">Sorted index of the other fish.</param>
+        void AvoidBody(int t, float3 p, float3 halfSegI, float lengthI, float3 offset, float distSq,
             ref float3 separation, ref float3 correction)
         {
-            float lengthJ = scales[j];
+            float lengthJ = sortedScales[t];
             float bodyRadii = boids.bodyRadius * (lengthI + lengthJ);
             float avoidRange = bodyRadii + boids.personalSpace * 0.5f * (lengthI + lengthJ);
             float reach = 0.5f * (lengthI + lengthJ) + avoidRange; // centres further apart can't interact
             if (distSq > reach * reach) return;
 
-            float3 fwdJ = math.normalizesafe(velocities[j], new float3(0, 0, 1));
+            float3 fwdJ = math.normalizesafe(sortedVelocities[t], new float3(0, 0, 1));
             float3 halfSegJ = fwdJ * (0.5f * Capsule.SegmentFraction * lengthJ);
             float3 pj = p + offset;
             Capsule.ClosestPoints(p - halfSegI, p + halfSegI, pj - halfSegJ, pj + halfSegJ, out float3 onI, out float3 onJ);

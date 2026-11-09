@@ -45,7 +45,16 @@ namespace SeaSim.Fish
         NativeArray<byte> beating;
         NativeArray<float4> swimStates;
         NativeArray<Matrix4x4> matrices;
-        NativeParallelMultiHashMap<int, int> grid, collisionGrid;
+        // Sorted spatial grid (see GridLayout): fish sorted by cell, with contiguous copies of their data.
+        const int MaxGridCells = 4_000_000;
+        /// <summary>
+        /// Grid cells per body reach (1 = 3x3x3 search). Measured: 2 (5x5x5 search with smaller cells) barely reduces
+        /// the steering cost while the counting sort over 8x more cells costs more, so 1 is faster at every fish count.
+        /// </summary>
+        const int ReachCells = 1;
+        NativeArray<int> fishCell, order, cellStart, cellCursor;
+        NativeArray<float3> sortedPositions, sortedVelocities;
+        NativeArray<float> sortedScales, sortedPanic;
         JobHandle handle;
 
         Mesh fishMesh;
@@ -56,6 +65,15 @@ namespace SeaSim.Fish
 
         public FishSpecies Species => species;
         public int FishCount => allocatedCount;
+        /// <summary>
+        /// Wall-clock time (ms) between scheduling the simulation jobs (Update) and their completion (LateUpdate).
+        /// It equals the simulation cost when the main thread has little else to do, e.g. in the benchmark scene.
+        /// </summary>
+        public float LastSimulationMilliseconds { get; private set; }
+        double scheduleTime;
+
+        /// <summary>Changes the number of fish; the school is re-spawned on the next Update.</summary>
+        public void SetFishCount(int count) => fishCount = math.max(1, count);
         public Bounds Volume => new Bounds(transform.position, volumeSize);
         /// <summary>Fish positions (valid after this school's LateUpdate). Useful for cameras, predators, debugging.</summary>
         public NativeArray<float3>.ReadOnly Positions { get { handle.Complete(); return positions.AsReadOnly(); } }
@@ -108,8 +126,13 @@ namespace SeaSim.Fish
             beating = new NativeArray<byte>(n, Allocator.Persistent);
             swimStates = new NativeArray<float4>(n, Allocator.Persistent);
             matrices = new NativeArray<Matrix4x4>(n, Allocator.Persistent);
-            grid = new NativeParallelMultiHashMap<int, int>(n, Allocator.Persistent);
-            collisionGrid = new NativeParallelMultiHashMap<int, int>(n, Allocator.Persistent);
+            fishCell = new NativeArray<int>(n, Allocator.Persistent);
+            order = new NativeArray<int>(n, Allocator.Persistent);
+            sortedPositions = new NativeArray<float3>(n, Allocator.Persistent);
+            sortedVelocities = new NativeArray<float3>(n, Allocator.Persistent);
+            sortedScales = new NativeArray<float>(n, Allocator.Persistent);
+            sortedPanic = new NativeArray<float>(n, Allocator.Persistent);
+            // Cell arrays are sized in Update, once the grid layout is known.
             swimBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, n, sizeof(float) * 4);
 
             int batches = (n + MaxInstancesPerDraw - 1) / MaxInstancesPerDraw;
@@ -165,8 +188,14 @@ namespace SeaSim.Fish
             if (beating.IsCreated) beating.Dispose();
             if (swimStates.IsCreated) swimStates.Dispose();
             if (matrices.IsCreated) matrices.Dispose();
-            if (grid.IsCreated) grid.Dispose();
-            if (collisionGrid.IsCreated) collisionGrid.Dispose();
+            if (fishCell.IsCreated) fishCell.Dispose();
+            if (order.IsCreated) order.Dispose();
+            if (cellStart.IsCreated) cellStart.Dispose();
+            if (cellCursor.IsCreated) cellCursor.Dispose();
+            if (sortedPositions.IsCreated) sortedPositions.Dispose();
+            if (sortedVelocities.IsCreated) sortedVelocities.Dispose();
+            if (sortedScales.IsCreated) sortedScales.Dispose();
+            if (sortedPanic.IsCreated) sortedPanic.Dispose();
             swimBuffer?.Release();
             swimBuffer = null;
         }
@@ -182,58 +211,80 @@ namespace SeaSim.Fish
                 Allocate();
             }
 
+            scheduleTime = Time.realtimeSinceStartupAsDouble;
             var boids = species.schooling;
             float dt = math.min(Time.deltaTime, 1f / 30f);
-            float cellSize = math.max(boids.perceptionRadius, 0.1f);
-            // Fine grid cell = largest distance at which two bodies can interact, so 27 cells are always enough.
+            // Body reach = largest distance at which two bodies can interact. Cells are a fraction of it, and the
+            // search covers ReachCells cells on each side: smaller cells hug the search sphere more tightly.
             float maxLength = species.length * (1f + species.sizeVariation);
-            float collisionCellSize = math.max(maxLength * (1f + 2f * boids.bodyRadius + boids.personalSpace), 0.05f);
+            float reach = math.max(maxLength * (1f + 2f * boids.bodyRadius + boids.personalSpace), 0.05f);
+            var layout = GridLayout.Create(transform.position, volumeSize, reach / ReachCells, MaxGridCells);
+            int nearCells = (int)math.ceil(reach * layout.invCellSize - 1e-4f);
+            if (!cellStart.IsCreated || cellCursor.Length != layout.CellCount)
+            {
+                if (cellStart.IsCreated) cellStart.Dispose();
+                if (cellCursor.IsCreated) cellCursor.Dispose();
+                cellStart = new NativeArray<int>(layout.CellCount + 1, Allocator.Persistent);
+                cellCursor = new NativeArray<int>(layout.CellCount, Allocator.Persistent);
+            }
 
             // Predators known this frame (their positions were updated last LateUpdate).
             var predatorList = FishPredator.Active;
             var predators = new NativeArray<PredatorState>(predatorList.Count, Allocator.TempJob);
             for (int p = 0; p < predatorList.Count; p++) predators[p] = predatorList[p].State;
 
-            grid.Clear();
-            collisionGrid.Clear();
-            var hashJob = new HashPositionsJob
+            // Sort the fish by grid cell: cell index (parallel) -> counting sort (single) -> gather (parallel).
+            var cellJob = new CellIndexJob
             {
                 positions = positions,
-                invCellSize = 1f / cellSize,
-                grid = grid.AsParallelWriter(),
-            }.Schedule(allocatedCount, 64);
-            var collisionHashJob = new HashPositionsJob
+                fishCell = fishCell,
+                layout = layout,
+            }.Schedule(allocatedCount, 256);
+            var sortJob = new CountingSortJob
             {
-                positions = positions,
-                invCellSize = 1f / collisionCellSize,
-                grid = collisionGrid.AsParallelWriter(),
-            }.Schedule(allocatedCount, 64);
-
-            var steerJob = new SteerJob
+                fishCell = fishCell,
+                cellStart = cellStart,
+                cellCursor = cellCursor,
+                order = order,
+            }.Schedule(cellJob);
+            var gatherJob = new GatherSortedJob
             {
+                order = order,
                 positions = positions,
                 velocities = velocities,
                 scales = scales,
-                cruiseSpeeds = cruiseSpeeds,
                 panic = panic,
+                sortedPositions = sortedPositions,
+                sortedVelocities = sortedVelocities,
+                sortedScales = sortedScales,
+                sortedPanic = sortedPanic,
+            }.Schedule(allocatedCount, 256, sortJob);
+
+            var steerJob = new SteerJob
+            {
+                order = order,
+                cellStart = cellStart,
+                sortedPositions = sortedPositions,
+                sortedVelocities = sortedVelocities,
+                sortedScales = sortedScales,
+                sortedPanic = sortedPanic,
+                cruiseSpeeds = cruiseSpeeds,
                 predators = predators,
-                grid = grid,
-                collisionGrid = collisionGrid,
                 desiredDirections = desiredDirections,
                 desiredSpeeds = desiredSpeeds,
                 corrections = corrections,
                 newPanic = newPanic,
+                layout = layout,
+                nearCells = nearCells,
                 boids = boids,
                 swim = species.swimming,
                 escape = species.escape,
-                invCellSize = 1f / cellSize,
-                collisionCellSize = collisionCellSize,
                 boundsCenter = transform.position,
                 boundsExtents = (float3)volumeSize * 0.5f,
                 boundsMargin = volumeMargin,
                 time = Time.time,
                 deltaTime = dt,
-            }.Schedule(allocatedCount, 32, JobHandle.CombineDependencies(hashJob, collisionHashJob));
+            }.Schedule(allocatedCount, 32, gatherJob);
             predators.Dispose(steerJob);
 
             handle = new MotionJob
@@ -259,6 +310,7 @@ namespace SeaSim.Fish
         void LateUpdate()
         {
             handle.Complete();
+            LastSimulationMilliseconds = (float)((Time.realtimeSinceStartupAsDouble - scheduleTime) * 1000.0);
             // The panic computed this frame becomes the input of the next one.
             (panic, newPanic) = (newPanic, panic);
 
