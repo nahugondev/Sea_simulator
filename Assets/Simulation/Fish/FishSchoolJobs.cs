@@ -386,6 +386,8 @@ namespace SeaSim.Fish
         [ReadOnly] public NativeArray<float> scales;
         [ReadOnly] public NativeArray<float> panic;
         [ReadOnly] public NativeArray<int> fishSpecies;
+        [ReadOnly] public NativeArray<int> fishPopulation;
+        [ReadOnly] public NativeArray<PopulationData> populations;
         [ReadOnly] public NativeArray<SpeciesData> species;
         [WriteOnly] public NativeArray<Matrix4x4> matrices;
 
@@ -432,6 +434,10 @@ namespace SeaSim.Fish
 
             float3 v = dir * speed;
             float3 p = positions[i] + v * deltaTime + corrections[i];
+            // Hard limit: whatever the steering did, a fish never leaves its swimming volume (the enclave walls
+            // stand beyond it). The soft containment in SteerJob normally keeps fish well inside already.
+            var volume = populations[fishPopulation[i]];
+            p = math.clamp(p, volume.center - volume.extents, volume.center + volume.extents);
             positions[i] = p;
             velocities[i] = v;
 
