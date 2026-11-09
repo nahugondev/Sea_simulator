@@ -4,10 +4,15 @@ AI-assisted Unity 6 (6000.6, URP) underwater simulation, built as a public portf
 The user sets the direction; Claude writes most of the code and drives the editor through the `unity-mcp` server.
 Roadmap: fish schools (done) → seabed shaped by erosion → corals and relief → underwater look (murk, distortion, light).
 
+## Workflow: ask first, let the user test
+
+- An idea we discussed is not approval to implement it. Propose, wait for a clear yes, then do it.
+- One branch per feature (`feature/...`), never directly on `main`. If a change falls outside the current branch's scope (e.g. a predator while on a boids branch), ask which branch to use before writing code.
+- When work is ready, stop and let the user test it in Unity. Commit, push and merge only after they confirm, even if they asked for a merge earlier in the request.
+
 ## Language and git
 
 - Talk to the user in French. Write code, comments, shader code and **all commit messages in English**.
-- Work on a feature branch per roadmap step (`feature/...`), never directly on `main`.
 - No git identity is configured on this machine. Commit with
   `git -c user.name="nahugondev" -c user.email="45481067+nahugondev@users.noreply.github.com" commit ...`
   and end messages with the `Co-Authored-By: Claude` line (the project is openly AI-assisted).
