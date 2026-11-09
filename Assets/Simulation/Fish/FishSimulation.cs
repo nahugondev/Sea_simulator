@@ -223,6 +223,8 @@ namespace SeaSim.Fish
                 scales = scales,
                 panic = newPanic,
                 fishSpecies = fishSpecies,
+                fishPopulation = fishPopulation,
+                populations = populations,
                 species = speciesData,
                 matrices = matrices,
                 deltaTime = dt,

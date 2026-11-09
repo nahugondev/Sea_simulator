@@ -26,7 +26,10 @@ namespace SeaSim.Fish
         [Tooltip("Number of clusters fish are spawned in (they merge or split freely afterwards, within their species).")]
         [SerializeField, Range(1, 32)] int spawnClusters = 6;
 
-        [Header("Swimming volume (local space)")]
+        [Header("Swimming volume")]
+        [Tooltip("Shared swimming volume. When set, it replaces this school's own volume below.")]
+        [SerializeField] SeaSim.Environment.FishEnclave enclave;
+        [Tooltip("Own volume, centred on this object (used only without an enclave).")]
         [SerializeField] Vector3 volumeSize = new Vector3(40f, 12f, 40f);
         [SerializeField, Min(0.1f)] float volumeMargin = 4f;
 
@@ -45,7 +48,8 @@ namespace SeaSim.Fish
         public int SpawnClusters => spawnClusters;
         public float VolumeMargin => volumeMargin;
         public ShadowCastingMode CastShadows => castShadows;
-        public Bounds Volume => new Bounds(transform.position, volumeSize);
+        /// <summary>The volume this school swims in: the enclave's when one is set, otherwise its own.</summary>
+        public Bounds Volume => enclave != null ? enclave.SwimVolume : new Bounds(transform.position, volumeSize);
 
         /// <summary>Simulation time of the whole simulation (all schools), see <see cref="FishSimulation.LastSimulationMilliseconds"/>.</summary>
         public float LastSimulationMilliseconds => FishSimulation.Instance.LastSimulationMilliseconds;
@@ -97,9 +101,10 @@ namespace SeaSim.Fish
         void OnDrawGizmosSelected()
         {
             Gizmos.color = new Color(0.2f, 0.8f, 1f, 0.6f);
-            Gizmos.DrawWireCube(transform.position, volumeSize);
+            var volume = Volume;
+            Gizmos.DrawWireCube(volume.center, volume.size);
             Gizmos.color = new Color(0.2f, 0.8f, 1f, 0.2f);
-            Gizmos.DrawWireCube(transform.position, volumeSize - Vector3.one * volumeMargin * 2f);
+            Gizmos.DrawWireCube(volume.center, volume.size - Vector3.one * volumeMargin * 2f);
         }
     }
 }

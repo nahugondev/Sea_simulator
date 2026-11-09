@@ -36,6 +36,19 @@ Créer une scène sous-marine vivante et crédible, étape par étape, pour un p
 - Nage animée directement dans le shader, pilotée par la simulation
 - Poissons générés par le code, sans modèle 3D externe
 
+## Enclave
+
+- Une enclave de falaises de calcaire érodé entoure la zone de nage, avec une marge : la roche n'y entre jamais
+- Falaises générées par le code : grandes masses arrondies, poches creusées par l'eau, alcôves, sommet arrondi en plateau
+- Contour irrégulier (baies et avancées) pour ne pas trahir la forme rectangulaire de la zone de nage
+- Sol de sable en dunes douces, avec des rochers posés dessus
+- Textures réelles projetées sur les trois axes (triplanaire) avec l'éclairage PBR d'URP ; une seconde lecture de la texture à une autre échelle casse la répétition du motif
+- Tous les réglages (taille, relief, contour, plateau) se font dans l'Inspector de l'objet `Enclave`
+
+## Crédits
+
+- Textures de roche (*Rock Pitted Mossy*) et de sable (*Sand 01*) : [Poly Haven](https://polyhaven.com), licence CC0
+
 ## Le projet
 
 **Caméra :** clic droit pour regarder, ZQSD pour se déplacer, A/E pour descendre/monter, Maj pour accélérer, molette pour régler la vitesse.

@@ -1,0 +1,84 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: EnclaveRock
+  m_Shader: {fileID: 4800000, guid: d6a56fb2739c89e45a62f8d234f03c35, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _BaseMap:
+        m_Texture: {fileID: 2800000, guid: b9267fa30a7766144b89208653bc2762, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _NormalMap:
+        m_Texture: {fileID: 2800000, guid: 0f1e782771d31d04d871a536ab0a3117, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _OcclusionMap:
+        m_Texture: {fileID: 2800000, guid: 83b86276cf3c40e419fa919c50fa01c0, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _RoughnessMap:
+        m_Texture: {fileID: 2800000, guid: e4b76f9093da1044aa670fb91d0fe674, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _TopBaseMap:
+        m_Texture: {fileID: 2800000, guid: 50adcaf27f9603e4fa9712bf88f93997, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _TopNormalMap:
+        m_Texture: {fileID: 2800000, guid: 0e7ee089d29978342a96ceb1239bc6f7, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _AlgaeAmount: 0.718
+    - _BlendSharpness: 6.21
+    - _CavityOcclusion: 0.648
+    - _DetailFadeDistance: 70
+    - _DetailStrength: 0.7
+    - _GritDepth: 0.07
+    - _GrooveDepth: 0.12
+    - _LayerTone: 0
+    - _MacroScale: 23
+    - _MacroVariation: 0.378
+    - _NormalStrength: 1.06
+    - _Occlusion: 0.934
+    - _OcclusionStrength: 1
+    - _SecondBlend: 0.5
+    - _SecondPatchSize: 7
+    - _SecondScale: 2.37
+    - _SmoothnessScale: 0.463
+    - _StrataDepth: 0.45
+    - _StrataFrequency: 0.56
+    - _TileSize: 3
+    - _TopAmount: 0.6
+    - _TopThreshold: 0.8
+    - _TopTileSize: 2
+    - _Wetness: 0.046
+    - _Wrap: 0.173
+    m_Colors:
+    - _AlgaeColor: {r: 0.23999995, g: 0.5, b: 0.29999998, a: 1}
+    - _RockCool: {r: 0.30999997, g: 0.31999996, b: 0.32999998, a: 1}
+    - _RockWarm: {r: 0.43999997, g: 0.33999997, b: 0.25999996, a: 1}
+    - _Tint: {r: 1, g: 1, b: 1, a: 1}
+    - _TopTint: {r: 1, g: 1, b: 1, a: 1}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1
