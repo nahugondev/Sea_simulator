@@ -14,6 +14,9 @@ Shader "SeaSim/FishInstanced"
         _BackColor ("Back Color", Color) = (0.10, 0.20, 0.28, 1)
         _BellyColor ("Belly Color", Color) = (0.78, 0.82, 0.85, 1)
         _StripeColor ("Lateral Stripe Color", Color) = (0.35, 0.55, 0.65, 1)
+        _BackBarColor ("Back Bars Color", Color) = (0.03, 0.06, 0.08, 1)
+        _BackBarCount ("Back Bars Count (0 = none)", Float) = 0
+        _BackBarStrength ("Back Bars Strength", Range(0, 1)) = 0.8
         _Smoothness ("Smoothness", Range(0, 1)) = 0.75
         _Sheen ("Silver Sheen", Range(0, 4)) = 2.0
 
@@ -36,6 +39,9 @@ Shader "SeaSim/FishInstanced"
             half4 _BackColor;
             half4 _BellyColor;
             half4 _StripeColor;
+            half4 _BackBarColor;
+            half _BackBarCount;
+            half _BackBarStrength;
             half _Smoothness;
             half _Sheen;
             float _SwimFrequency;
@@ -159,6 +165,15 @@ Shader "SeaSim/FishInstanced"
                 half3 albedo = lerp(_BellyColor.rgb, _BackColor.rgb, smoothstep(-0.15, 0.55, h));
                 half stripe = exp(-pow((h - 0.2) * 9.0, 2.0)) * smoothstep(0.1, 0.3, i.uv.x) * (1.0 - smoothstep(0.75, 0.86, i.uv.x));
                 albedo = lerp(albedo, _StripeColor.rgb, stripe * 0.6);
+
+                // Optional wavy dark bars across the back (e.g. mackerel), fading toward the flanks and the tail.
+                if (_BackBarCount > 0.5)
+                {
+                    half wave = sin(i.uv.x * _BackBarCount * 6.2831853 + sin(h * 7.0) * 1.6);
+                    half bars = smoothstep(0.15, 0.55, wave);
+                    half mask = smoothstep(0.15, 0.55, h) * smoothstep(0.08, 0.2, i.uv.x) * (1.0 - smoothstep(0.78, 0.86, i.uv.x));
+                    albedo = lerp(albedo, _BackBarColor.rgb, bars * mask * _BackBarStrength);
+                }
 
                 Light mainLight = GetMainLight(TransformWorldToShadowCoord(i.positionWS));
                 half atten = mainLight.distanceAttenuation * mainLight.shadowAttenuation;

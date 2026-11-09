@@ -22,6 +22,17 @@ namespace SeaSim.Fish
         public SwimSettings swimming = SwimSettings.Default;
         public BoidSettings schooling = BoidSettings.Default;
         public EscapeSettings escape = EscapeSettings.Default;
+
+        /// <summary>The behaviour settings, packed for the simulation jobs.</summary>
+        public SpeciesData ToData() => new SpeciesData { boids = schooling, swim = swimming, escape = escape };
+    }
+
+    /// <summary>Per-species settings as read by the jobs (one entry per species, indexed by each fish's species index).</summary>
+    public struct SpeciesData
+    {
+        public BoidSettings boids;
+        public SwimSettings swim;
+        public EscapeSettings escape;
     }
 
     /// <summary>How an individual fish moves. Speeds in body lengths per second (BL/s).</summary>
@@ -103,8 +114,16 @@ namespace SeaSim.Fish
         public float levelingWeight;
         public float boundsWeight;
 
+        [Header("Other species")]
+        [Tooltip("Distance (BL) within which fish of another species are steered away from. Schools only form within a " +
+                 "species, so this is what makes two schools of different species avoid or cross each other instead of merging.")]
+        [Min(0f)] public float otherSpeciesDistance;
+        public float otherSpeciesWeight;
+
         public static BoidSettings Default => new BoidSettings
         {
+            otherSpeciesDistance = 2.5f,
+            otherSpeciesWeight = 2.5f,
             perceptionRadius = 2.2f,
             fieldOfView = 290f,
             topologicalNeighbours = 7,

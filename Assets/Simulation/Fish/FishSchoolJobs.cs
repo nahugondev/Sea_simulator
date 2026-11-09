@@ -14,6 +14,14 @@ namespace SeaSim.Fish
         public float length;
     }
 
+    /// <summary>Swimming volume of one <see cref="FishSchool"/> (each fish is kept inside its own school's volume).</summary>
+    public struct PopulationData
+    {
+        public float3 center;
+        public float3 extents;
+        public float margin;
+    }
+
     static class SearchOrder
     {
         /// <summary>Maps 0,1,2,3,4,... to 0,-1,+1,-2,+2,... so the closest rows of cells are visited first.</summary>
@@ -45,13 +53,15 @@ namespace SeaSim.Fish
 
     /// <summary>
     /// Decides where each fish wants to go and how fast (it does not move it: see <see cref="MotionJob"/>).
+    /// All species share one simulation; each fish reads the settings of its own species.
     /// - Runs in sorted order (see <see cref="GridLayout"/>): fish s reads its own data and its neighbours' data
     ///   from the sorted arrays, and writes its results at its original index order[s].
-    /// - Topological schooling: alignment / cohesion use the k nearest visible neighbours. Pass 1 scans the 27 cells
-    ///   around the fish; only fish in a sparse area that still lack neighbours scan wider rings of cells (pass 2).
-    /// - Bodies are capsules: separation uses the real distance between bodies, and overlaps are pushed apart.
-    /// - Predators: fish that see one flee sideways ('fountain effect'), and panic spreads from neighbour to
-    ///   neighbour, so an escape wave travels through the school.
+    /// - Bodies are capsules and never overlap, whatever the species: separation uses the real distance between
+    ///   bodies, and overlaps are pushed apart.
+    /// - Schools only form within a species: the k nearest visible neighbours used for alignment / cohesion are
+    ///   fish of the same species. Fish of other species are steered away from, so schools avoid or cross each other.
+    /// - Predators: fish that see one flee sideways ('fountain effect'). Panic spreads from neighbour to neighbour,
+    ///   across species too: a fleeing fish is an alarm signal for every fish around it.
     /// </summary>
     [BurstCompile(FloatMode = FloatMode.Fast)]
     struct SteerJob : IJobParallelFor
@@ -62,7 +72,11 @@ namespace SeaSim.Fish
         [ReadOnly] public NativeArray<float3> sortedVelocities;
         [ReadOnly] public NativeArray<float> sortedScales;
         [ReadOnly] public NativeArray<float> sortedPanic;
-        [ReadOnly] public NativeArray<float> cruiseSpeeds;
+        [ReadOnly] public NativeArray<int> sortedSpecies;
+        [ReadOnly] public NativeArray<float> cruiseSpeeds;     // original index
+        [ReadOnly] public NativeArray<int> fishPopulation;     // original index
+        [ReadOnly] public NativeArray<SpeciesData> species;
+        [ReadOnly] public NativeArray<PopulationData> populations;
         [ReadOnly] public NativeArray<PredatorState> predators;
 
         // Indexed by original fish index (order[s]), hence not by the job index.
@@ -72,20 +86,20 @@ namespace SeaSim.Fish
         [WriteOnly, NativeDisableParallelForRestriction] public NativeArray<float> newPanic;
 
         public GridLayout layout;
-        [Tooltip("Cells to scan on each side in pass 1; the cell size is the body reach divided by this value.")]
+        [Tooltip("Cells to scan on each side in pass 1 (the cell size covers the largest body reach of all species).")]
         public int nearCells;
-        public BoidSettings boids;
-        public SwimSettings swim;
-        public EscapeSettings escape;
-        public float3 boundsCenter;
-        public float3 boundsExtents;
-        public float boundsMargin;
         public float time;
         public float deltaTime;
 
         public void Execute(int s)
         {
             int i = order[s];
+            int mySpecies = sortedSpecies[s];
+            var data = species[mySpecies];
+            var boids = data.boids;
+            var swim = data.swim;
+            var escape = data.escape;
+
             float3 p = sortedPositions[s];
             float3 v = sortedVelocities[s];
             float speed = math.length(v);
@@ -97,14 +111,18 @@ namespace SeaSim.Fish
 
             var neighbourIds = new FixedList128Bytes<int>();
             var neighbourDistSq = new FixedList128Bytes<float>();
-            float3 separation = 0, correction = 0;
+            float3 separation = 0, correction = 0, otherSpeciesAway = 0;
+            float otherSpeciesPanic = 0f;
 
-            // ---- Pass 1, the cells within body reach: body avoidance (all around) + nearest visible neighbours ----
+            // ---- Pass 1, the cells within body reach ----
             // Cells are numbered x first, so each (y, z) row of cells is one contiguous range of sorted fish.
             int R = nearCells;
             float nearRadius = layout.cellSize * R;
             float nearRadiusSq = nearRadius * nearRadius;
             float perceptionSq = boids.perceptionRadius * boids.perceptionRadius;
+            // Other species are avoided within this distance (limited to what pass 1 covers).
+            float otherRange = math.min(boids.otherSpeciesDistance * lengthI, nearRadius);
+            float otherRangeSq = otherRange * otherRange;
             int3 cell = layout.CellCoord(p);
             int candidates = 0;
             int rows = 2 * R + 1;
@@ -121,13 +139,30 @@ namespace SeaSim.Fish
                     float3 offset = sortedPositions[t] - p;
                     float distSq = math.lengthsq(offset);
                     if (distSq < 1e-10f) continue;
+                    bool sameSpecies = sortedSpecies[t] == mySpecies;
+
                     if (distSq <= nearRadiusSq)
                     {
                         candidates++;
-                        AvoidBody(t, p, halfSegI, lengthI, offset, distSq, ref separation, ref correction);
+                        // Bodies never overlap, whatever the species.
+                        AvoidBody(t, p, halfSegI, lengthI, boids, offset, distSq, ref separation, ref correction);
+
+                        if (!sameSpecies)
+                        {
+                            // Keep away from other species (stronger when closer), and notice if they are fleeing.
+                            if (distSq < otherRangeSq)
+                            {
+                                float d = math.sqrt(distSq);
+                                float w = 1f - d / otherRange;
+                                otherSpeciesAway -= offset / d * (w * w);
+                            }
+                            otherSpeciesPanic = math.max(otherSpeciesPanic, sortedPanic[t]);
+                        }
                     }
-                    // Every fish of these cells is a neighbour candidate (pass 2 only looks at cells further out).
-                    if (distSq <= perceptionSq && CanEnter(ref neighbourDistSq, k, distSq) && IsVisible(forward, offset, distSq, cosHalfFov))
+
+                    // Only fish of the same species can be schooling neighbours (pass 2 only looks further out).
+                    if (sameSpecies && distSq <= perceptionSq && CanEnter(ref neighbourDistSq, k, distSq)
+                        && IsVisible(forward, offset, distSq, cosHalfFov))
                         InsertNearest(ref neighbourIds, ref neighbourDistSq, k, t, distSq);
                 }
             }
@@ -157,6 +192,7 @@ namespace SeaSim.Fish
                             for (int t = cellStart[layout.Flatten(new int3(xMin, y, z))]; t < end; t++)
                             {
                                 scanned++;
+                                if (sortedSpecies[t] != mySpecies) continue;
                                 float3 offset = sortedPositions[t] - p;
                                 float distSq = math.lengthsq(offset);
                                 if (distSq > perceptionSq) continue;
@@ -168,9 +204,9 @@ namespace SeaSim.Fish
                 }
             }
 
-            // ---- Neighbour averages ----
+            // ---- Neighbour averages (same species only) ----
             float3 alignment = 0, cohesion = 0;
-            float neighbourSpeed = 0, neighbourPanic = 0;
+            float neighbourSpeed = 0, neighbourPanic = otherSpeciesPanic; // alarm crosses species
             int count = neighbourIds.Length;
             for (int n = 0; n < count; n++)
             {
@@ -229,13 +265,16 @@ namespace SeaSim.Fish
             }
             if (math.lengthsq(separation) > 0f)
                 accel += SteerTowards(v, separation, desiredSpeed, maxSteer) * boids.separationWeight * math.min(math.length(separation), 2f);
+            if (math.lengthsq(otherSpeciesAway) > 0f)
+                accel += SteerTowards(v, otherSpeciesAway, desiredSpeed, maxSteer) * boids.otherSpeciesWeight * math.min(math.length(otherSpeciesAway), 2f);
             if (math.lengthsq(flee) > 0f)
                 accel += SteerTowards(v, flee, burst, maxSteer) * escape.fleeWeight;
 
-            // Soft containment: the push grows as the fish goes deeper into the margin.
-            float3 local = p - boundsCenter;
-            float3 inner = math.max(boundsExtents - boundsMargin, 0.01f);
-            float3 over = math.max(math.abs(local) - inner, 0f) / math.max(boundsMargin, 0.01f);
+            // Soft containment in the fish's own school volume: the push grows deeper into the margin.
+            var volume = populations[fishPopulation[i]];
+            float3 local = p - volume.center;
+            float3 inner = math.max(volume.extents - volume.margin, 0.01f);
+            float3 over = math.max(math.abs(local) - inner, 0f) / math.max(volume.margin, 0.01f);
             accel += -math.sign(local) * over * over * boids.boundsWeight * maxSteer;
 
             // Fish swim mostly level.
@@ -257,12 +296,13 @@ namespace SeaSim.Fish
             corrections[i] = ClampLength(correction * boids.collisionStiffness, boids.bodyRadius * lengthI);
         }
 
-        /// <param name="t">Sorted index of the other fish.</param>
-        void AvoidBody(int t, float3 p, float3 halfSegI, float lengthI, float3 offset, float distSq,
+        /// <param name="t">Sorted index of the other fish, of any species.</param>
+        void AvoidBody(int t, float3 p, float3 halfSegI, float lengthI, BoidSettings boids, float3 offset, float distSq,
             ref float3 separation, ref float3 correction)
         {
             float lengthJ = sortedScales[t];
-            float bodyRadii = boids.bodyRadius * (lengthI + lengthJ);
+            float radiusJ = species[sortedSpecies[t]].boids.bodyRadius * lengthJ;
+            float bodyRadii = boids.bodyRadius * lengthI + radiusJ;
             float avoidRange = bodyRadii + boids.personalSpace * 0.5f * (lengthI + lengthJ);
             float reach = 0.5f * (lengthI + lengthJ) + avoidRange; // centres further apart can't interact
             if (distSq > reach * reach) return;
@@ -345,9 +385,10 @@ namespace SeaSim.Fish
         [ReadOnly] public NativeArray<float3> corrections;
         [ReadOnly] public NativeArray<float> scales;
         [ReadOnly] public NativeArray<float> panic;
+        [ReadOnly] public NativeArray<int> fishSpecies;
+        [ReadOnly] public NativeArray<SpeciesData> species;
         [WriteOnly] public NativeArray<Matrix4x4> matrices;
 
-        public SwimSettings swim;
         public float deltaTime;
 
         const float TwoPi = 6.2831853f;
@@ -355,6 +396,7 @@ namespace SeaSim.Fish
 
         public void Execute(int i)
         {
+            var swim = species[fishSpecies[i]].swim;
             float L = scales[i];
             float p01 = panic[i];
             float3 oldV = velocities[i];
