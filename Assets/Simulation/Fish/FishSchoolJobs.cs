@@ -14,8 +14,8 @@ namespace SeaSim.Fish
         public float length;
     }
 
-    /// <summary>Swimming volume of one <see cref="FishSchool"/> (each fish is kept inside its own school's volume).</summary>
-    public struct PopulationData
+    /// <summary>The single swimming volume shared by every fish (the enclave's), with its soft containment margin.</summary>
+    public struct SwimVolumeData
     {
         public float3 center;
         public float3 extents;
@@ -74,9 +74,8 @@ namespace SeaSim.Fish
         [ReadOnly] public NativeArray<float> sortedPanic;
         [ReadOnly] public NativeArray<int> sortedSpecies;
         [ReadOnly] public NativeArray<float> cruiseSpeeds;     // original index
-        [ReadOnly] public NativeArray<int> fishPopulation;     // original index
         [ReadOnly] public NativeArray<SpeciesData> species;
-        [ReadOnly] public NativeArray<PopulationData> populations;
+        public SwimVolumeData volume;
         [ReadOnly] public NativeArray<PredatorState> predators;
 
         // Indexed by original fish index (order[s]), hence not by the job index.
@@ -270,8 +269,7 @@ namespace SeaSim.Fish
             if (math.lengthsq(flee) > 0f)
                 accel += SteerTowards(v, flee, burst, maxSteer) * escape.fleeWeight;
 
-            // Soft containment in the fish's own school volume: the push grows deeper into the margin.
-            var volume = populations[fishPopulation[i]];
+            // Soft containment in the shared swimming volume: the push grows deeper into the margin.
             float3 local = p - volume.center;
             float3 inner = math.max(volume.extents - volume.margin, 0.01f);
             float3 over = math.max(math.abs(local) - inner, 0f) / math.max(volume.margin, 0.01f);
@@ -386,8 +384,7 @@ namespace SeaSim.Fish
         [ReadOnly] public NativeArray<float> scales;
         [ReadOnly] public NativeArray<float> panic;
         [ReadOnly] public NativeArray<int> fishSpecies;
-        [ReadOnly] public NativeArray<int> fishPopulation;
-        [ReadOnly] public NativeArray<PopulationData> populations;
+        public SwimVolumeData volume;
         [ReadOnly] public NativeArray<SpeciesData> species;
         [WriteOnly] public NativeArray<Matrix4x4> matrices;
 
@@ -436,7 +433,6 @@ namespace SeaSim.Fish
             float3 p = positions[i] + v * deltaTime + corrections[i];
             // Hard limit: whatever the steering did, a fish never leaves its swimming volume (the enclave walls
             // stand beyond it). The soft containment in SteerJob normally keeps fish well inside already.
-            var volume = populations[fishPopulation[i]];
             p = math.clamp(p, volume.center - volume.extents, volume.center + volume.extents);
             positions[i] = p;
             velocities[i] = v;

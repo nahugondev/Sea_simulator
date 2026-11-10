@@ -7,7 +7,8 @@ using UnityEngine.Rendering;
 namespace SeaSim.Fish
 {
     /// <summary>
-    /// A population of fish of one <see cref="FishSpecies"/>: how many, where they spawn and which volume they swim in.
+    /// A population of fish of one <see cref="FishSpecies"/>: how many and how they spawn. Every school swims in the
+    /// scene's single swimming volume, defined by the <see cref="SeaSim.Environment.FishEnclave"/>.
     /// The fish themselves are simulated and rendered by the scene's <see cref="FishSimulation"/>, together with the
     /// fish of every other school, so different species interact (they avoid each other and never form one school).
     /// Use several FishSchool components (same or different species) to populate a scene.
@@ -26,13 +27,6 @@ namespace SeaSim.Fish
         [Tooltip("Number of clusters fish are spawned in (they merge or split freely afterwards, within their species).")]
         [SerializeField, Range(1, 32)] int spawnClusters = 6;
 
-        [Header("Swimming volume")]
-        [Tooltip("Shared swimming volume. When set, it replaces this school's own volume below.")]
-        [SerializeField] SeaSim.Environment.FishEnclave enclave;
-        [Tooltip("Own volume, centred on this object (used only without an enclave).")]
-        [SerializeField] Vector3 volumeSize = new Vector3(40f, 12f, 40f);
-        [SerializeField, Min(0.1f)] float volumeMargin = 4f;
-
         [Header("Rendering")]
         [SerializeField] ShadowCastingMode castShadows = ShadowCastingMode.On;
 
@@ -46,10 +40,7 @@ namespace SeaSim.Fish
         internal int StartIndex => startIndex;
         public uint Seed => seed;
         public int SpawnClusters => spawnClusters;
-        public float VolumeMargin => volumeMargin;
         public ShadowCastingMode CastShadows => castShadows;
-        /// <summary>The volume this school swims in: the enclave's when one is set, otherwise its own.</summary>
-        public Bounds Volume => enclave != null ? enclave.SwimVolume : new Bounds(transform.position, volumeSize);
 
         /// <summary>Simulation time of the whole simulation (all schools), see <see cref="FishSimulation.LastSimulationMilliseconds"/>.</summary>
         public float LastSimulationMilliseconds => FishSimulation.Instance.LastSimulationMilliseconds;
@@ -96,15 +87,6 @@ namespace SeaSim.Fish
             // Don't create a simulation while the scene is being torn down.
             var simulation = FindAnyObjectByType<FishSimulation>();
             if (simulation != null) simulation.Unregister(this);
-        }
-
-        void OnDrawGizmosSelected()
-        {
-            Gizmos.color = new Color(0.2f, 0.8f, 1f, 0.6f);
-            var volume = Volume;
-            Gizmos.DrawWireCube(volume.center, volume.size);
-            Gizmos.color = new Color(0.2f, 0.8f, 1f, 0.2f);
-            Gizmos.DrawWireCube(volume.center, volume.size - Vector3.one * volumeMargin * 2f);
         }
     }
 }

@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
+using SeaSim.Environment;
 using UnityEngine;
 
 namespace SeaSim.Fish
@@ -13,14 +14,24 @@ namespace SeaSim.Fish
     ///
     /// Data layout: all fish live in the same arrays. Each school owns a contiguous range [start, start + count),
     /// so its fish can be rendered with its own mesh and material in a few instanced draws. Each fish stores its
-    /// species index (settings read by the jobs) and its school index (swimming volume).
+    /// species index (settings read by the jobs).
     /// Adding a species needs no code: create a <see cref="FishSpecies"/> asset and a <see cref="FishSchool"/>.
     ///
+    /// Every fish swims in one volume, defined in a single place: the scene's <see cref="FishEnclave"/>.
     /// A FishSimulation is created automatically by the first FishSchool if the scene has none.
     /// </summary>
     [DefaultExecutionOrder(-10)]
     public class FishSimulation : MonoBehaviour
     {
+        [Header("Swimming volume")]
+        [Tooltip("The enclave whose swimming volume every fish shares. Found automatically when left empty.")]
+        [SerializeField] FishEnclave enclave;
+        [Tooltip("Depth (m) of the band inside the volume's edges where fish start turning back.")]
+        [SerializeField, Min(0.1f)] float volumeMargin = 4f;
+
+        bool missingEnclaveWarned;
+        Bounds drawBounds;
+
         const int MaxInstancesPerDraw = 1023;
         const int MaxGridCells = 4_000_000;
         /// <summary>
@@ -55,7 +66,7 @@ namespace SeaSim.Fish
         // Per fish (original index)
         NativeArray<float3> positions, velocities, desiredDirections, corrections;
         NativeArray<float> scales, cruiseSpeeds, desiredSpeeds, panic, newPanic;
-        NativeArray<int> fishSpecies, fishPopulation;
+        NativeArray<int> fishSpecies;
         NativeArray<byte> beating;
         NativeArray<float4> swimStates;
         NativeArray<Matrix4x4> matrices;
@@ -64,9 +75,8 @@ namespace SeaSim.Fish
         NativeArray<float3> sortedPositions, sortedVelocities;
         NativeArray<float> sortedScales, sortedPanic;
         NativeArray<int> sortedSpecies;
-        // Per species / per school
+        // Per species
         NativeArray<SpeciesData> speciesData;
-        NativeArray<PopulationData> populations;
 
         GraphicsBuffer swimBuffer;
         // A rebuild replaces the swim buffer, but draws already queued this frame (e.g. by the editor's Scene view)
@@ -83,6 +93,25 @@ namespace SeaSim.Fish
         public float LastSimulationMilliseconds { get; private set; }
         public int FishCount => fishCount;
         public int SpeciesCount => speciesList.Count;
+        public float VolumeMargin => volumeMargin;
+
+        /// <summary>The enclave fish swim in (the one assigned, otherwise the scene's), or null if there is none.</summary>
+        public FishEnclave Enclave
+        {
+            get
+            {
+                if (enclave == null && FishEnclave.Active.Count > 0) enclave = FishEnclave.Active[0];
+                return enclave;
+            }
+        }
+
+        /// <summary>The swimming volume shared by every fish (world space). False when the scene has no enclave.</summary>
+        public bool TryGetSwimVolume(out Bounds volume)
+        {
+            var e = Enclave;
+            volume = e != null ? e.SwimVolume : default;
+            return e != null;
+        }
 
         internal void Register(FishSchool school)
         {
@@ -128,8 +157,16 @@ namespace SeaSim.Fish
 
         void Update()
         {
+            if (!TryGetSwimVolume(out var swimVolume))
+            {
+                if (!missingEnclaveWarned) Debug.LogWarning("FishSimulation: the scene has no FishEnclave, so fish have no swimming volume and are not simulated.", this);
+                missingEnclaveWarned = true;
+                return;
+            }
+            missingEnclaveWarned = false;
+
             foreach (var school in schools) if (school.NeedsRebuild) dirty = true;
-            if (dirty) Rebuild();
+            if (dirty) Rebuild(swimVolume);
             if (fishCount == 0) return;
 
             scheduleTime = Time.realtimeSinceStartupAsDouble;
@@ -145,15 +182,10 @@ namespace SeaSim.Fish
                 float maxLength = sp.length * (1f + sp.sizeVariation);
                 reach = math.max(reach, maxLength * (1f + 2f * sp.schooling.bodyRadius + sp.schooling.personalSpace));
             }
-            Bounds world = default;
-            for (int p = 0; p < schools.Count; p++)
-            {
-                var volume = schools[p].Volume;
-                populations[p] = new PopulationData { center = volume.center, extents = volume.extents, margin = schools[p].VolumeMargin };
-                if (p == 0) world = volume; else world.Encapsulate(volume);
-            }
+            drawBounds = new Bounds(swimVolume.center, swimVolume.size + Vector3.one * 2f);
+            var volumeData = new SwimVolumeData { center = swimVolume.center, extents = swimVolume.extents, margin = volumeMargin };
 
-            var layout = GridLayout.Create(world.center, world.size, reach / ReachCells, MaxGridCells);
+            var layout = GridLayout.Create(swimVolume.center, swimVolume.size, reach / ReachCells, MaxGridCells);
             int nearCells = (int)math.ceil(reach * layout.invCellSize - 1e-4f);
             if (!cellStart.IsCreated || cellCursor.Length != layout.CellCount)
             {
@@ -196,9 +228,8 @@ namespace SeaSim.Fish
                 sortedPanic = sortedPanic,
                 sortedSpecies = sortedSpecies,
                 cruiseSpeeds = cruiseSpeeds,
-                fishPopulation = fishPopulation,
                 species = speciesData,
-                populations = populations,
+                volume = volumeData,
                 predators = predators,
                 desiredDirections = desiredDirections,
                 desiredSpeeds = desiredSpeeds,
@@ -223,8 +254,7 @@ namespace SeaSim.Fish
                 scales = scales,
                 panic = newPanic,
                 fishSpecies = fishSpecies,
-                fishPopulation = fishPopulation,
-                populations = populations,
+                volume = volumeData,
                 species = speciesData,
                 matrices = matrices,
                 deltaTime = dt,
@@ -260,7 +290,7 @@ namespace SeaSim.Fish
                     int first = school.StartIndex + b * MaxInstancesPerDraw;
                     var rp = new RenderParams(material)
                     {
-                        worldBounds = new Bounds(school.Volume.center, school.Volume.size + Vector3.one * 2f),
+                        worldBounds = drawBounds,
                         shadowCastingMode = school.CastShadows,
                         receiveShadows = true,
                         layer = school.gameObject.layer,
@@ -273,7 +303,7 @@ namespace SeaSim.Fish
         }
 
         /// <summary>(Re)allocates every array and re-spawns all fish, after a school, a count or a species changed.</summary>
-        void Rebuild()
+        void Rebuild(Bounds swimVolume)
         {
             handle.Complete();
             retiredSwimBuffer?.Release();
@@ -305,7 +335,6 @@ namespace SeaSim.Fish
             panic = new NativeArray<float>(n, Allocator.Persistent);
             newPanic = new NativeArray<float>(n, Allocator.Persistent);
             fishSpecies = new NativeArray<int>(n, Allocator.Persistent);
-            fishPopulation = new NativeArray<int>(n, Allocator.Persistent);
             beating = new NativeArray<byte>(n, Allocator.Persistent);
             swimStates = new NativeArray<float4>(n, Allocator.Persistent);
             matrices = new NativeArray<Matrix4x4>(n, Allocator.Persistent);
@@ -317,7 +346,6 @@ namespace SeaSim.Fish
             sortedPanic = new NativeArray<float>(n, Allocator.Persistent);
             sortedSpecies = new NativeArray<int>(n, Allocator.Persistent);
             speciesData = new NativeArray<SpeciesData>(speciesList.Count, Allocator.Persistent);
-            populations = new NativeArray<PopulationData>(schools.Count, Allocator.Persistent);
             // Cell arrays are sized in Update, once the grid layout is known.
             swimBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, n, sizeof(float) * 4);
 
@@ -328,7 +356,7 @@ namespace SeaSim.Fish
                 var school = schools[p];
                 int count = school.FishCountSetting;
                 school.AssignRange(start, count);
-                Spawn(school, p, speciesList.IndexOf(school.Species), start, count);
+                Spawn(school, swimVolume, speciesList.IndexOf(school.Species), start, count);
 
                 int batches = (count + MaxInstancesPerDraw - 1) / MaxInstancesPerDraw;
                 var properties = new MaterialPropertyBlock[batches];
@@ -344,14 +372,13 @@ namespace SeaSim.Fish
         }
 
         /// <summary>Spawns a school's fish in a few clusters, each with a shared heading, so schools are visible from frame one.</summary>
-        void Spawn(FishSchool school, int populationIndex, int speciesIndex, int start, int count)
+        void Spawn(FishSchool school, Bounds volume, int speciesIndex, int start, int count)
         {
             var species = school.Species;
             var swim = species.swimming;
             var rng = new Unity.Mathematics.Random(school.Seed == 0 ? 1u : school.Seed);
-            var volume = school.Volume;
             float3 center = volume.center;
-            float3 inner = math.max((float3)volume.extents - school.VolumeMargin, 0.5f);
+            float3 inner = math.max((float3)volume.extents - volumeMargin, 0.5f);
             int clusters = math.max(1, school.SpawnClusters);
 
             var clusterCenters = new float3[clusters];
@@ -374,7 +401,6 @@ namespace SeaSim.Fish
                 positions[i] = clusterCenters[c] + rng.NextFloat3Direction() * rng.NextFloat(0f, 3f);
                 velocities[i] = math.normalizesafe(clusterHeadings[c] + rng.NextFloat3Direction() * 0.3f) * cruiseSpeeds[i];
                 fishSpecies[i] = speciesIndex;
-                fishPopulation[i] = populationIndex;
                 beating[i] = (byte)(rng.NextBool() ? 1 : 0);
                 swimStates[i] = new float4(rng.NextFloat(0f, 6.2831853f), 1f, 0f, 0f);
                 matrices[i] = Matrix4x4.TRS(positions[i], Quaternion.LookRotation(velocities[i]), Vector3.one * length);
@@ -393,7 +419,6 @@ namespace SeaSim.Fish
             if (panic.IsCreated) panic.Dispose();
             if (newPanic.IsCreated) newPanic.Dispose();
             if (fishSpecies.IsCreated) fishSpecies.Dispose();
-            if (fishPopulation.IsCreated) fishPopulation.Dispose();
             if (beating.IsCreated) beating.Dispose();
             if (swimStates.IsCreated) swimStates.Dispose();
             if (matrices.IsCreated) matrices.Dispose();
@@ -407,7 +432,6 @@ namespace SeaSim.Fish
             if (sortedPanic.IsCreated) sortedPanic.Dispose();
             if (sortedSpecies.IsCreated) sortedSpecies.Dispose();
             if (speciesData.IsCreated) speciesData.Dispose();
-            if (populations.IsCreated) populations.Dispose();
             swimBuffer?.Release();
             swimBuffer = null;
             fishCount = 0;

@@ -44,11 +44,6 @@ namespace SeaSim.Fish
         [SerializeField, Min(0.1f)] float maxChaseTime = 3.5f;
         [SerializeField, Min(0f)] float catchDistance = 0.5f;
 
-        [Header("Territory")]
-        [Tooltip("Optional: stay inside this school's volume. Otherwise the predator patrols around its start position.")]
-        [SerializeField] FishSchool territory;
-        [SerializeField] Vector3 fallbackTerritorySize = new Vector3(40f, 12f, 40f);
-
         Mode mode = Mode.Patrol;
         float timer;
         float speed;
@@ -57,7 +52,7 @@ namespace SeaSim.Fish
         int targetIndex = -1;
         float retargetTimer;
         float swimPhase, swimEffort = 1f;
-        Bounds fallbackTerritory;
+        Vector3 startPosition;
         Transform body;
         MeshRenderer bodyRenderer;
         MaterialPropertyBlock properties;
@@ -75,7 +70,7 @@ namespace SeaSim.Fish
         {
             active.Add(this);
             rng = new Unity.Mathematics.Random((uint)(GetHashCode() | 1));
-            fallbackTerritory = new Bounds(transform.position, fallbackTerritorySize);
+            startPosition = transform.position;
             direction = math.normalizesafe((float3)transform.forward, new float3(0, 0, 1));
             speed = cruiseSpeed;
             timer = rng.NextFloat(restTime.x, restTime.y);
@@ -168,7 +163,9 @@ namespace SeaSim.Fish
 
         float3 PatrolDirection(float3 position)
         {
-            Bounds area = territory != null ? territory.Volume : fallbackTerritory;
+            // Patrol the fish's shared swimming volume; without an enclave, stay around the start position.
+            if (!FishSimulation.Instance.TryGetSwimVolume(out Bounds area))
+                area = new Bounds(startPosition, new Vector3(20f, 6f, 20f));
             float3 center = area.center;
             float3 local = position - center;
             float3 inner = (float3)area.extents * 0.7f;
