@@ -51,7 +51,7 @@ Material:
     m_Floats:
     - _AlgaeAmount: 0.718
     - _BlendSharpness: 6.21
-    - _CavityOcclusion: 0.648
+    - _CavityOcclusion: 0.75
     - _DetailFadeDistance: 70
     - _DetailStrength: 0.7
     - _GritDepth: 0.07
@@ -62,14 +62,14 @@ Material:
     - _NormalStrength: 1.06
     - _Occlusion: 0.934
     - _OcclusionStrength: 1
-    - _SecondBlend: 0.5
+    - _SecondBlend: 0.75
     - _SecondPatchSize: 7
     - _SecondScale: 2.37
     - _SmoothnessScale: 0.463
     - _StrataDepth: 0.45
     - _StrataFrequency: 0.56
-    - _TileSize: 3
-    - _TopAmount: 0.6
+    - _TileSize: 6.38
+    - _TopAmount: 0.575
     - _TopThreshold: 0.8
     - _TopTileSize: 2
     - _Wetness: 0.046
@@ -78,7 +78,7 @@ Material:
     - _AlgaeColor: {r: 0.23999995, g: 0.5, b: 0.29999998, a: 1}
     - _RockCool: {r: 0.30999997, g: 0.31999996, b: 0.32999998, a: 1}
     - _RockWarm: {r: 0.43999997, g: 0.33999997, b: 0.25999996, a: 1}
-    - _Tint: {r: 1, g: 1, b: 1, a: 1}
-    - _TopTint: {r: 1, g: 1, b: 1, a: 1}
+    - _Tint: {r: 0.7264151, g: 0.7264151, b: 0.7264151, a: 1}
+    - _TopTint: {r: 0.33222982, g: 0.4528302, b: 0.3268067, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
