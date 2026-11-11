@@ -508,7 +508,7 @@ GameObject:
   - component: {fileID: 1522496640}
   - component: {fileID: 1522496639}
   m_Layer: 0
-  m_Name: FishSchool
+  m_Name: FishSchool_StandardModel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -526,7 +526,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 807852ff0d9320e4f8c99fdfc4ecc493, type: 3}
   m_Name: 
   m_EditorClassIdentifier: SeaSim.Simulation::SeaSim.Fish.FishSchool
-  species: {fileID: 11400000, guid: 2e9c12cecb6108740b56afe12ec8ef19, type: 2}
+  species: {fileID: 11400000, guid: e030ce9c35737864e9540b8478e9ff05, type: 2}
   fishCount: 10000
   seed: 12345
   spawnClusters: 6

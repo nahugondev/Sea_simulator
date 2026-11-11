@@ -1,0 +1,63 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8aa71c9b183197f4f883a0d00ce49268, type: 3}
+  m_Name: TropicalFish07
+  m_EditorClassIdentifier: SeaSim.Simulation::SeaSim.Fish.FishSpecies
+  material: {fileID: 2100000, guid: e27f85fff824e6e4190d191ba97e63ad, type: 2}
+  bodyShape:
+    halfHeight: 0.115
+    halfWidth: 0.055
+    bodyEnd: 0.86
+    tailSize: 1.2
+    dorsalFinSize: 1
+  model: {fileID: 8499908474687770080, guid: 6d6ef3847b33aa1429db606494824e74, type: 3}
+  modelForward: {x: 0, y: -1, z: 0}
+  modelUp: {x: 0, y: 0, z: 1}
+  length: 0.3
+  sizeVariation: 0.2
+  swimming:
+    cruiseSpeed: 3
+    speedVariation: 0.15
+    minSpeed: 1
+    burstSpeed: 10
+    thrustAcceleration: 6
+    glideDrag: 0.8
+    glideBand: 0.1
+    strideLength: 0.7
+    cruiseTurnRadius: 1
+    escapeTurnRadius: 0.2
+  schooling:
+    perceptionRadius: 2.2
+    fieldOfView: 290
+    topologicalNeighbours: 7
+    maxCandidates: 96
+    bodyRadius: 0.08383655
+    bodyHeightRatio: 2.0880535
+    personalSpace: 0.8
+    collisionStiffness: 0.9
+    maxSteerForce: 12
+    separationWeight: 3.5
+    alignmentWeight: 1.8
+    cohesionWeight: 0.7
+    speedMatching: 0.5
+    wanderWeight: 0.1
+    levelingWeight: 0.8
+    boundsWeight: 3
+    otherSpeciesDistance: 2.5
+    otherSpeciesWeight: 2.5
+  escape:
+    alarmDistance: 12
+    alarmTransmission: 0.9
+    alarmSpreadRate: 12
+    panicDecayTime: 2.5
+    fleeWeight: 3
+    cohesionDrop: 0.7

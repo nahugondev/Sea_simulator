@@ -40,7 +40,7 @@ namespace SeaSim.Fish
         [Tooltip("How far (m) the predator can spot prey.")]
         [SerializeField, Min(0f)] float detectionRange = 15f;
         [Tooltip("Random rest time between two attacks (s).")]
-        [SerializeField] Vector2 restTime = new Vector2(4f, 9f);
+        [SerializeField] Vector2 restTime = new Vector2(20f, 40f);
         [SerializeField, Min(0.1f)] float maxChaseTime = 3.5f;
         [SerializeField, Min(0f)] float catchDistance = 0.5f;
 

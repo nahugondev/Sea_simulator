@@ -14,7 +14,13 @@ namespace SeaSim.Fish
     {
         [Header("Look")]
         public Material material;
-        public FishBodyShape bodyShape = FishBodyShape.Sardine;
+        [Tooltip("3D model of the fish (prefab or model asset, one static mesh). It is re-oriented, centred and scaled " +
+                 "to a length of 1 automatically; the swimming wave is applied by the shader.")]
+        public GameObject model;
+        [Tooltip("Direction the fish's nose points to, in the model's own mesh space.")]
+        public Vector3 modelForward = Vector3.forward;
+        [Tooltip("Direction of the fish's back (dorsal side), in the model's own mesh space.")]
+        public Vector3 modelUp = Vector3.up;
         [Tooltip("Average fish length in metres.")]
         [Min(0.01f)] public float length = 0.3f;
         [Range(0f, 0.5f)] public float sizeVariation = 0.2f;
@@ -96,6 +102,10 @@ namespace SeaSim.Fish
         [Header("Body (in fish lengths)")]
         [Tooltip("Radius of the capsule approximating the body.")]
         [Range(0.01f, 0.5f)] public float bodyRadius;
+        [Tooltip("Height of the body section relative to its width (1 = round section). Deep-bodied fish or fish with " +
+                 "large dorsal and anal fins need more than 1, so they never overlap vertically while still swimming " +
+                 "close side by side. Values below 1 are treated as 1.")]
+        [Range(1f, 10f)] public float bodyHeightRatio;
         [Tooltip("Free space each fish tries to keep around its body.")]
         [Range(0f, 2f)] public float personalSpace;
         [Tooltip("How much of an overlap between two bodies is pushed out each frame (0 = none, 1 = all).")]
@@ -129,6 +139,7 @@ namespace SeaSim.Fish
             topologicalNeighbours = 7,
             maxCandidates = 96,
             bodyRadius = 0.09f,
+            bodyHeightRatio = 1f,
             personalSpace = 0.8f,
             collisionStiffness = 0.9f,
             maxSteerForce = 12f,

@@ -1,16 +1,26 @@
 // Instanced fish shader for URP.
-// - Swimming: a travelling sine wave is applied in the vertex shader. Its amplitude grows from head to tail
-//   (UV0.x = 0 at the nose, 1 at the tail).
+// - Swimming: a travelling sine wave is applied in the vertex shader. Its amplitude grows from head to tail.
+//   The position along the body is read from the geometry (s = 0.5 - z: the fish points along +Z, is 1 unit
+//   long and centred), so the same wave drives the generated bodies and imported 3D models alike.
 //   * Instanced (FishSchool): the tail phase and effort of each fish come from the simulation, through the
 //     _FishSwimState StructuredBuffer, so the tail beat follows the fish's speed (burst and glide).
 //     Only use GPU instancing with this shader through FishSchool, which binds that buffer.
 //   * Not instanced (e.g. FishPredator): _SwimState = (phase, effort, useIt, 0) set from a MaterialPropertyBlock;
 //     when _SwimState.z is 0 the tail simply beats at _SwimFrequency.
-// - Counter-shading: dark back, silvery belly (UV0.y = -1 belly .. +1 back), with a fresnel sheen.
+// - Colour, either:
+//   * generated: counter-shading, dark back and silvery belly (UV0.y = -1 belly .. +1 back), stripe and bars;
+//   * textured (Use Texture on, for imported models): the model's own texture, through its own UVs.
+//   Both get a fresnel sheen, stronger on the flanks and belly than on the back.
 Shader "SeaSim/FishInstanced"
 {
     Properties
     {
+        [Header(Texture (imported models))]
+        [Toggle] _UseBaseMap ("Use Texture", Float) = 0
+        _BaseMap ("Texture", 2D) = "white" {}
+        _BaseColor ("Texture Tint", Color) = (1, 1, 1, 1)
+
+        [Header(Generated colours)]
         _BackColor ("Back Color", Color) = (0.10, 0.20, 0.28, 1)
         _BellyColor ("Belly Color", Color) = (0.78, 0.82, 0.85, 1)
         _StripeColor ("Lateral Stripe Color", Color) = (0.35, 0.55, 0.65, 1)
@@ -36,6 +46,9 @@ Shader "SeaSim/FishInstanced"
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 
         CBUFFER_START(UnityPerMaterial)
+            float4 _BaseMap_ST;
+            half4 _BaseColor;
+            half _UseBaseMap;
             half4 _BackColor;
             half4 _BellyColor;
             half4 _StripeColor;
@@ -125,6 +138,8 @@ Shader "SeaSim/FishInstanced"
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
 
+            TEXTURE2D(_BaseMap); SAMPLER(sampler_BaseMap);
+
             struct Varyings
             {
                 float4 positionCS : SV_POSITION;
@@ -143,7 +158,7 @@ Shader "SeaSim/FishInstanced"
 
                 float3 pos = v.positionOS.xyz;
                 float3 nrm = v.normalOS;
-                Swim(pos, nrm, v.uv.x);
+                Swim(pos, nrm, saturate(0.5 - pos.z));
 
                 VertexPositionInputs vp = GetVertexPositionInputs(pos);
                 o.positionCS = vp.positionCS;
@@ -160,19 +175,30 @@ Shader "SeaSim/FishInstanced"
                 float3 n = normalize(i.normalWS) * (isFrontFace ? 1.0 : -1.0);
                 float3 viewDir = GetWorldSpaceNormalizeViewDir(i.positionWS);
 
-                // Counter-shading + a soft lateral stripe.
-                half h = i.uv.y;
-                half3 albedo = lerp(_BellyColor.rgb, _BackColor.rgb, smoothstep(-0.15, 0.55, h));
-                half stripe = exp(-pow((h - 0.2) * 9.0, 2.0)) * smoothstep(0.1, 0.3, i.uv.x) * (1.0 - smoothstep(0.75, 0.86, i.uv.x));
-                albedo = lerp(albedo, _StripeColor.rgb, stripe * 0.6);
-
-                // Optional wavy dark bars across the back (e.g. mackerel), fading toward the flanks and the tail.
-                if (_BackBarCount > 0.5)
+                half3 albedo;
+                half h; // -1 belly .. +1 back, drives the silver sheen
+                if (_UseBaseMap > 0.5)
                 {
-                    half wave = sin(i.uv.x * _BackBarCount * 6.2831853 + sin(h * 7.0) * 1.6);
-                    half bars = smoothstep(0.15, 0.55, wave);
-                    half mask = smoothstep(0.15, 0.55, h) * smoothstep(0.08, 0.2, i.uv.x) * (1.0 - smoothstep(0.78, 0.86, i.uv.x));
-                    albedo = lerp(albedo, _BackBarColor.rgb, bars * mask * _BackBarStrength);
+                    // Imported model: its own texture. Fish swim level, so the world normal tells back from belly.
+                    albedo = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, TRANSFORM_TEX(i.uv, _BaseMap)).rgb * _BaseColor.rgb;
+                    h = n.y;
+                }
+                else
+                {
+                    // Counter-shading + a soft lateral stripe.
+                    h = i.uv.y;
+                    albedo = lerp(_BellyColor.rgb, _BackColor.rgb, smoothstep(-0.15, 0.55, h));
+                    half stripe = exp(-pow((h - 0.2) * 9.0, 2.0)) * smoothstep(0.1, 0.3, i.uv.x) * (1.0 - smoothstep(0.75, 0.86, i.uv.x));
+                    albedo = lerp(albedo, _StripeColor.rgb, stripe * 0.6);
+
+                    // Optional wavy dark bars across the back (e.g. mackerel), fading toward the flanks and the tail.
+                    if (_BackBarCount > 0.5)
+                    {
+                        half wave = sin(i.uv.x * _BackBarCount * 6.2831853 + sin(h * 7.0) * 1.6);
+                        half bars = smoothstep(0.15, 0.55, wave);
+                        half mask = smoothstep(0.15, 0.55, h) * smoothstep(0.08, 0.2, i.uv.x) * (1.0 - smoothstep(0.78, 0.86, i.uv.x));
+                        albedo = lerp(albedo, _BackBarColor.rgb, bars * mask * _BackBarStrength);
+                    }
                 }
 
                 Light mainLight = GetMainLight(TransformWorldToShadowCoord(i.positionWS));
@@ -222,7 +248,7 @@ Shader "SeaSim/FishInstanced"
                 UNITY_SETUP_INSTANCE_ID(v);
                 float3 pos = v.positionOS.xyz;
                 float3 nrm = v.normalOS;
-                Swim(pos, nrm, v.uv.x);
+                Swim(pos, nrm, saturate(0.5 - pos.z));
 
                 float3 positionWS = TransformObjectToWorld(pos);
                 float3 normalWS = TransformObjectToWorldNormal(nrm);
@@ -261,7 +287,7 @@ Shader "SeaSim/FishInstanced"
                 UNITY_SETUP_INSTANCE_ID(v);
                 float3 pos = v.positionOS.xyz;
                 float3 nrm = v.normalOS;
-                Swim(pos, nrm, v.uv.x);
+                Swim(pos, nrm, saturate(0.5 - pos.z));
                 return TransformObjectToHClip(pos);
             }
 
@@ -293,7 +319,7 @@ Shader "SeaSim/FishInstanced"
                 UNITY_SETUP_INSTANCE_ID(v);
                 float3 pos = v.positionOS.xyz;
                 float3 nrm = v.normalOS;
-                Swim(pos, nrm, v.uv.x);
+                Swim(pos, nrm, saturate(0.5 - pos.z));
                 o.positionCS = TransformObjectToHClip(pos);
                 o.normalWS = TransformObjectToWorldNormal(nrm);
                 return o;

@@ -180,7 +180,7 @@ namespace SeaSim.Fish
                 speciesData[s] = sp.ToData();
                 // Body reach = largest distance at which two bodies can interact.
                 float maxLength = sp.length * (1f + sp.sizeVariation);
-                reach = math.max(reach, maxLength * (1f + 2f * sp.schooling.bodyRadius + sp.schooling.personalSpace));
+                reach = math.max(reach, maxLength * (1f + 2f * sp.schooling.bodyRadius * math.max(1f, sp.schooling.bodyHeightRatio) + sp.schooling.personalSpace));
             }
             drawBounds = new Bounds(swimVolume.center, swimVolume.size + Vector3.one * 2f);
             var volumeData = new SwimVolumeData { center = swimVolume.center, extents = swimVolume.extents, margin = volumeMargin };
@@ -283,7 +283,7 @@ namespace SeaSim.Fish
                 var school = schools[p];
                 var material = school.Species.material;
                 if (material == null || school.FishCount == 0) continue;
-                var mesh = meshes[school.Species];
+                if (!meshes.TryGetValue(school.Species, out var mesh) || mesh == null) continue;
                 var batches = schoolBatchProperties[p];
                 for (int b = 0; b < batches.Length; b++)
                 {
@@ -319,7 +319,7 @@ namespace SeaSim.Fish
             foreach (var school in schools)
             {
                 if (!speciesList.Contains(school.Species)) speciesList.Add(school.Species);
-                if (!meshes.ContainsKey(school.Species)) meshes[school.Species] = FishMeshBuilder.Build(school.Species.bodyShape);
+                if (!meshes.ContainsKey(school.Species)) meshes[school.Species] = FishMeshBuilder.Build(school.Species);
                 fishCount += school.FishCountSetting;
             }
             if (fishCount == 0) return;

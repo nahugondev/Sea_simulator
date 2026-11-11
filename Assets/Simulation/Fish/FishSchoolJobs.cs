@@ -291,18 +291,29 @@ namespace SeaSim.Fish
             desiredSpeeds[i] = desiredSpeed;
 
             // Never move more than one body radius per frame to resolve overlaps (avoids jitter).
-            corrections[i] = ClampLength(correction * boids.collisionStiffness, boids.bodyRadius * lengthI);
+            corrections[i] = ClampLength(correction * boids.collisionStiffness, boids.bodyRadius * HeightRatio(boids) * lengthI);
         }
 
         /// <param name="t">Sorted index of the other fish, of any species.</param>
+        /// <remarks>
+        /// Bodies are capsules with an elliptical section: half-width = bodyRadius, half-height = bodyRadius x
+        /// bodyHeightRatio (fish swim level, so "height" is the world vertical). The distance between the two capsule
+        /// axes is measured in a space where the vertical is squashed by width / height, which turns the pair of
+        /// ellipses into circles of radius bodyRadii: the usual round-capsule test then applies unchanged, and with a
+        /// ratio of 1 the result is exactly the round capsule.
+        /// </remarks>
         void AvoidBody(int t, float3 p, float3 halfSegI, float lengthI, BoidSettings boids, float3 offset, float distSq,
             ref float3 separation, ref float3 correction)
         {
             float lengthJ = sortedScales[t];
-            float radiusJ = species[sortedSpecies[t]].boids.bodyRadius * lengthJ;
-            float bodyRadii = boids.bodyRadius * lengthI + radiusJ;
+            var boidsJ = species[sortedSpecies[t]].boids;
+            float radiusI = boids.bodyRadius * lengthI, radiusJ = boidsJ.bodyRadius * lengthJ;
+            float bodyRadii = radiusI + radiusJ;                                       // combined half-width
+            float bodyHeights = radiusI * HeightRatio(boids) + radiusJ * HeightRatio(boidsJ); // combined half-height
+            float squash = bodyRadii / bodyHeights;                                     // <= 1
             float avoidRange = bodyRadii + boids.personalSpace * 0.5f * (lengthI + lengthJ);
-            float reach = 0.5f * (lengthI + lengthJ) + avoidRange; // centres further apart can't interact
+            // Centres further apart can't interact (vertically, bodies reach up to bodyHeights).
+            float reach = 0.5f * (lengthI + lengthJ) + avoidRange + (bodyHeights - bodyRadii);
             if (distSq > reach * reach) return;
 
             float3 fwdJ = math.normalizesafe(sortedVelocities[t], new float3(0, 0, 1));
@@ -310,8 +321,12 @@ namespace SeaSim.Fish
             float3 pj = p + offset;
             Capsule.ClosestPoints(p - halfSegI, p + halfSegI, pj - halfSegJ, pj + halfSegJ, out float3 onI, out float3 onJ);
             float3 away = onI - onJ;
+            away.y *= squash;                       // ellipses -> circles
             float gap = math.length(away);
             float3 dir = gap > 1e-5f ? away / gap : math.normalizesafe(-offset, new float3(0, 1, 0));
+            // Back to real space: a vertical push must cover height / width times more distance.
+            float3 push = dir;
+            push.y /= squash;
 
             if (gap < avoidRange)
             {
@@ -320,8 +335,10 @@ namespace SeaSim.Fish
                 separation += dir * (w * w + (gap < bodyRadii ? 1f : 0f));
             }
             if (gap < bodyRadii)
-                correction += dir * (bodyRadii - gap) * 0.5f; // each fish takes half of the overlap
+                correction += push * (bodyRadii - gap) * 0.5f; // each fish takes half of the overlap
         }
+
+        static float HeightRatio(BoidSettings boids) => math.max(1f, boids.bodyHeightRatio);
 
         /// <summary>Cheap test before the visibility check: would this distance make it into the k nearest?</summary>
         static bool CanEnter(ref FixedList128Bytes<float> distSq, int k, float d)
