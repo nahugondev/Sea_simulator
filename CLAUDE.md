@@ -10,6 +10,13 @@ Roadmap: fish schools (done) → seabed shaped by erosion → corals and relief 
 - One branch per feature (`feature/...`), never directly on `main`. If a change falls outside the current branch's scope (e.g. a predator while on a boids branch), ask which branch to use before writing code.
 - When work is ready, stop and let the user test it in Unity. Commit, push and merge only after they confirm, even if they asked for a merge earlier in the request.
 
+## Keep the project clean
+
+- While making a significant change, keep a running list of the files and scene objects it makes obsolete or unused (replaced scripts, shaders, materials, species, prefabs, models, textures, disabled scene objects, settings no longer read). Check with a search that nothing still references them.
+- When handing the work over for testing, show that list to the user, so they test the version without those files in mind.
+- Once the user has validated the change, remove the listed files (and their `.meta`) before committing and pushing, then confirm in the console that nothing broke (no missing scripts or references). Mention the removals in the commit message.
+- Never remove anything the user added or tuned themselves without asking first, and keep anything they said to keep for now.
+
 ## Language and git
 
 - Talk to the user in French. Write code, comments, shader code and **all commit messages in English**.

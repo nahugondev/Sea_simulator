@@ -18,17 +18,6 @@ namespace SeaSim.Fish
         [Tooltip("Size of the dorsal fin (0 = none).")]
         [Range(0f, 2f)] public float dorsalFinSize;
 
-        public static FishBodyShape Sardine => new FishBodyShape
-        {
-            halfHeight = 0.115f, halfWidth = 0.055f, bodyEnd = 0.86f, tailSize = 1.2f, dorsalFinSize = 1f,
-        };
-
-        /// <summary>Spindle-shaped, rounder in section than a sardine, with a large forked tail.</summary>
-        public static FishBodyShape Mackerel => new FishBodyShape
-        {
-            halfHeight = 0.085f, halfWidth = 0.062f, bodyEnd = 0.87f, tailSize = 1.6f, dorsalFinSize = 0.8f,
-        };
-
         public static FishBodyShape Predator => new FishBodyShape
         {
             halfHeight = 0.075f, halfWidth = 0.05f, bodyEnd = 0.88f, tailSize = 1.9f, dorsalFinSize = 1.4f,
@@ -36,23 +25,22 @@ namespace SeaSim.Fish
     }
 
     /// <summary>
-    /// Builds a small, low-poly fish mesh procedurally (no external asset needed).
-    /// The fish points along +Z, is 1 unit long and is centred on the origin.
-    /// UV0.x = normalised position along the body (0 = nose, 1 = tail tip; the swim shader reads it from z instead).
-    /// UV0.y = normalised height (-1 = belly, +1 = back), used for counter-shading.
+    /// Fish meshes, all in the same frame so the swim shader treats them alike: the fish points along +Z, is 1 unit
+    /// long and is centred on the origin.
+    /// - Species use their 3D model (<see cref="FromModel"/>).
+    /// - The predator still uses a small procedural body (<see cref="Build(FishBodyShape, int, int)"/>), with
+    ///   UV0.x = position along the body (0 = nose, 1 = tail tip) and UV0.y = height (-1 = belly, +1 = back),
+    ///   used by the shader's generated colours.
     /// </summary>
     public static class FishMeshBuilder
     {
-        /// <summary>The species' mesh: its 3D model when one is set, otherwise a generated body.</summary>
+        /// <summary>The species' mesh, from its 3D model. Null (with an error) when the model is missing or unreadable.</summary>
         public static Mesh Build(FishSpecies species)
         {
-            if (species.model != null)
-            {
-                var mesh = FromModel(species.model, species.modelForward, species.modelUp);
-                if (mesh != null) return mesh;
-                Debug.LogWarning($"{species.name}: the model has no readable mesh, using the generated body instead.", species);
-            }
-            return Build(species.bodyShape);
+            var mesh = species.model != null ? FromModel(species.model, species.modelForward, species.modelUp) : null;
+            if (mesh == null)
+                Debug.LogError($"{species.name}: no model, or its mesh is not readable (enable Read/Write in the model's import settings).", species);
+            return mesh;
         }
 
         /// <summary>

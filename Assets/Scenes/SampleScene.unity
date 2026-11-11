@@ -119,6 +119,202 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!1 &53456807
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 53456808}
+  - component: {fileID: 53456809}
+  m_Layer: 0
+  m_Name: FishSchool_TropicalFish02
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &53456808
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 53456807}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1953808923}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &53456809
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 53456807}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 807852ff0d9320e4f8c99fdfc4ecc493, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: SeaSim.Simulation::SeaSim.Fish.FishSchool
+  species: {fileID: 11400000, guid: 0bc35ec978c8bfc4693a657bc61d8112, type: 2}
+  fishCount: 1200
+  seed: 1194
+  spawnClusters: 6
+  castShadows: 1
+--- !u!1 &131426456
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 131426457}
+  - component: {fileID: 131426458}
+  m_Layer: 0
+  m_Name: FishSchool_TropicalFish05
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &131426457
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 131426456}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1953808923}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &131426458
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 131426456}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 807852ff0d9320e4f8c99fdfc4ecc493, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: SeaSim.Simulation::SeaSim.Fish.FishSchool
+  species: {fileID: 11400000, guid: 31c024d2f1961564594ba42cbe3b07cb, type: 2}
+  fishCount: 950
+  seed: 1485
+  spawnClusters: 6
+  castShadows: 1
+--- !u!1 &166412996
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 166412997}
+  - component: {fileID: 166412998}
+  m_Layer: 0
+  m_Name: FishSchool_TropicalFish13
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &166412997
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 166412996}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1953808923}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &166412998
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 166412996}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 807852ff0d9320e4f8c99fdfc4ecc493, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: SeaSim.Simulation::SeaSim.Fish.FishSchool
+  species: {fileID: 11400000, guid: 68850c858ab649e47b12d614c2d352ec, type: 2}
+  fishCount: 500
+  seed: 2261
+  spawnClusters: 6
+  castShadows: 1
+--- !u!1 &177805492
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 177805493}
+  - component: {fileID: 177805494}
+  m_Layer: 0
+  m_Name: FishSchool_TropicalFish09
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &177805493
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 177805492}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1953808923}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &177805494
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 177805492}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 807852ff0d9320e4f8c99fdfc4ecc493, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: SeaSim.Simulation::SeaSim.Fish.FishSchool
+  species: {fileID: 11400000, guid: 7a30be482d3e6fe41b932a2737253928, type: 2}
+  fishCount: 1150
+  seed: 1873
+  spawnClusters: 6
+  castShadows: 1
 --- !u!1 &304826238
 GameObject:
   m_ObjectHideFlags: 0
@@ -434,6 +630,104 @@ MonoBehaviour:
   m_ShadowLayerMask: 1
   m_RenderingLayers: 1
   m_ShadowRenderingLayers: 1
+--- !u!1 &431870559
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 431870560}
+  - component: {fileID: 431870561}
+  m_Layer: 0
+  m_Name: FishSchool_TropicalFish14
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &431870560
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 431870559}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1953808923}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &431870561
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 431870559}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 807852ff0d9320e4f8c99fdfc4ecc493, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: SeaSim.Simulation::SeaSim.Fish.FishSchool
+  species: {fileID: 11400000, guid: 784b24fecb9140e43a742f1feec0b726, type: 2}
+  fishCount: 650
+  seed: 2358
+  spawnClusters: 6
+  castShadows: 1
+--- !u!1 &450636333
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 450636334}
+  - component: {fileID: 450636335}
+  m_Layer: 0
+  m_Name: FishSchool_TropicalFish03
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &450636334
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 450636333}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1953808923}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &450636335
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 450636333}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 807852ff0d9320e4f8c99fdfc4ecc493, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: SeaSim.Simulation::SeaSim.Fish.FishSchool
+  species: {fileID: 11400000, guid: 5d2649a604a96134e8a8853478ea5d2e, type: 2}
+  fishCount: 1150
+  seed: 1291
+  spawnClusters: 6
+  castShadows: 1
 --- !u!1 &467545614
 GameObject:
   m_ObjectHideFlags: 0
@@ -479,9 +773,58 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: SeaSim.Simulation::SeaSim.Fish.FishSchool
   species: {fileID: 11400000, guid: 41b87da2339a39f47bdb46bbfa8a5f99, type: 2}
-  fishCount: 2500
+  fishCount: 500
   seed: 777
   spawnClusters: 4
+  castShadows: 1
+--- !u!1 &553183930
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 553183931}
+  - component: {fileID: 553183932}
+  m_Layer: 0
+  m_Name: FishSchool_TropicalFish07
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &553183931
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 553183930}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1953808923}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &553183932
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 553183930}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 807852ff0d9320e4f8c99fdfc4ecc493, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: SeaSim.Simulation::SeaSim.Fish.FishSchool
+  species: {fileID: 11400000, guid: b005f9d2aee3b2d4ebf573b2f520c61b, type: 2}
+  fishCount: 900
+  seed: 1679
+  spawnClusters: 6
   castShadows: 1
 --- !u!1 &617452876
 GameObject:
@@ -526,7 +869,7 @@ MonoBehaviour:
   turnRadius: {x: 3, y: 1.5}
   strideLength: 0.8
   detectionRange: 15
-  restTime: {x: 4, y: 9}
+  restTime: {x: 20, y: 40}
   maxChaseTime: 3.5
   catchDistance: 0.5
 --- !u!4 &617452878
@@ -544,6 +887,104 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &779066524
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 779066525}
+  - component: {fileID: 779066526}
+  m_Layer: 0
+  m_Name: FishSchool_TropicalFish11
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &779066525
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 779066524}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1953808923}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &779066526
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 779066524}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 807852ff0d9320e4f8c99fdfc4ecc493, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: SeaSim.Simulation::SeaSim.Fish.FishSchool
+  species: {fileID: 11400000, guid: 030b0a55f5e234841b20ac6a683e1744, type: 2}
+  fishCount: 700
+  seed: 2067
+  spawnClusters: 6
+  castShadows: 1
+--- !u!1 &798136050
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 798136051}
+  - component: {fileID: 798136052}
+  m_Layer: 0
+  m_Name: FishSchool_TropicalFish01
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &798136051
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 798136050}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1953808923}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &798136052
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 798136050}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 807852ff0d9320e4f8c99fdfc4ecc493, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: SeaSim.Simulation::SeaSim.Fish.FishSchool
+  species: {fileID: 11400000, guid: d7615482979ac9e46ba6c9585cb852f2, type: 2}
+  fishCount: 1150
+  seed: 1097
+  spawnClusters: 6
+  castShadows: 1
 --- !u!1 &832575517
 GameObject:
   m_ObjectHideFlags: 0
@@ -593,6 +1034,55 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1170969645
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1170969646}
+  - component: {fileID: 1170969647}
+  m_Layer: 0
+  m_Name: FishSchool_TropicalFish06
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1170969646
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1170969645}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1953808923}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1170969647
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1170969645}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 807852ff0d9320e4f8c99fdfc4ecc493, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: SeaSim.Simulation::SeaSim.Fish.FishSchool
+  species: {fileID: 11400000, guid: 011f2e4209bcc274896e1abd98121399, type: 2}
+  fishCount: 1100
+  seed: 1582
+  spawnClusters: 6
+  castShadows: 1
 --- !u!1 &1181355754
 GameObject:
   m_ObjectHideFlags: 0
@@ -978,7 +1468,7 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1522496638
+--- !u!1 &1389712035
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -986,39 +1476,22 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 1522496640}
-  - component: {fileID: 1522496639}
+  - component: {fileID: 1389712036}
+  - component: {fileID: 1389712037}
   m_Layer: 0
-  m_Name: FishSchool_Sardines
+  m_Name: FishSchool_TropicalFish12
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
---- !u!114 &1522496639
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1522496638}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 807852ff0d9320e4f8c99fdfc4ecc493, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: SeaSim.Simulation::SeaSim.Fish.FishSchool
-  species: {fileID: 11400000, guid: 2e9c12cecb6108740b56afe12ec8ef19, type: 2}
-  fishCount: 5000
-  seed: 12345
-  spawnClusters: 6
-  castShadows: 1
---- !u!4 &1522496640
+  m_IsActive: 1
+--- !u!4 &1389712036
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1522496638}
+  m_GameObject: {fileID: 1389712035}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -1027,6 +1500,72 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1953808923}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1389712037
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1389712035}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 807852ff0d9320e4f8c99fdfc4ecc493, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: SeaSim.Simulation::SeaSim.Fish.FishSchool
+  species: {fileID: 11400000, guid: 4350d64a0ef8cda4aa8750586f34d371, type: 2}
+  fishCount: 800
+  seed: 2164
+  spawnClusters: 6
+  castShadows: 1
+--- !u!1 &1505201188
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1505201189}
+  - component: {fileID: 1505201190}
+  m_Layer: 0
+  m_Name: FishSchool_TropicalFish10
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1505201189
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1505201188}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1953808923}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1505201190
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1505201188}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 807852ff0d9320e4f8c99fdfc4ecc493, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: SeaSim.Simulation::SeaSim.Fish.FishSchool
+  species: {fileID: 11400000, guid: 7ced674726c8ec043a1f599dba0ed0b6, type: 2}
+  fishCount: 550
+  seed: 1970
+  spawnClusters: 6
+  castShadows: 1
 --- !u!1 &1897237970
 GameObject:
   m_ObjectHideFlags: 0
@@ -1072,11 +1611,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: SeaSim.Simulation::SeaSim.Fish.FishSchool
   species: {fileID: 11400000, guid: e030ce9c35737864e9540b8478e9ff05, type: 2}
-  fishCount: 5000
+  fishCount: 600
   seed: 12345
   spawnClusters: 6
   castShadows: 1
---- !u!1 &1916530225
+--- !u!1 &1923154702
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1084,39 +1623,22 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 1916530227}
-  - component: {fileID: 1916530226}
+  - component: {fileID: 1923154703}
+  - component: {fileID: 1923154704}
   m_Layer: 0
-  m_Name: FishSchool_Mackerels
+  m_Name: FishSchool_TropicalFish08
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
---- !u!114 &1916530226
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1916530225}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 807852ff0d9320e4f8c99fdfc4ecc493, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: SeaSim.Simulation::SeaSim.Fish.FishSchool
-  species: {fileID: 11400000, guid: 1d7e23dbe2318d9469f5d8cd9e681ada, type: 2}
-  fishCount: 2500
-  seed: 777
-  spawnClusters: 4
-  castShadows: 1
---- !u!4 &1916530227
+  m_IsActive: 1
+--- !u!4 &1923154703
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1916530225}
+  m_GameObject: {fileID: 1923154702}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -1125,6 +1647,23 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1953808923}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1923154704
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1923154702}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 807852ff0d9320e4f8c99fdfc4ecc493, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: SeaSim.Simulation::SeaSim.Fish.FishSchool
+  species: {fileID: 11400000, guid: 88cd67bb45b9ba34491fffd5221e8757, type: 2}
+  fishCount: 700
+  seed: 1776
+  spawnClusters: 6
+  castShadows: 1
 --- !u!1 &1940940674
 GameObject:
   m_ObjectHideFlags: 0
@@ -1280,12 +1819,73 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 1522496640}
-  - {fileID: 1916530227}
   - {fileID: 1897237971}
   - {fileID: 467545615}
+  - {fileID: 798136051}
+  - {fileID: 53456808}
+  - {fileID: 450636334}
+  - {fileID: 2107028000}
+  - {fileID: 131426457}
+  - {fileID: 1170969646}
+  - {fileID: 553183931}
+  - {fileID: 1923154703}
+  - {fileID: 177805493}
+  - {fileID: 1505201189}
+  - {fileID: 779066525}
+  - {fileID: 1389712036}
+  - {fileID: 166412997}
+  - {fileID: 431870560}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &2107027999
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2107028000}
+  - component: {fileID: 2107028001}
+  m_Layer: 0
+  m_Name: FishSchool_TropicalFish04
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2107028000
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2107027999}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1953808923}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2107028001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2107027999}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 807852ff0d9320e4f8c99fdfc4ecc493, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: SeaSim.Simulation::SeaSim.Fish.FishSchool
+  species: {fileID: 11400000, guid: bf6850fea16b5b9458ebbb8f8b556646, type: 2}
+  fishCount: 450
+  seed: 1388
+  spawnClusters: 6
+  castShadows: 1
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

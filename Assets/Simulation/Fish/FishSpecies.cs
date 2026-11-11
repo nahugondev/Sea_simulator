@@ -14,10 +14,8 @@ namespace SeaSim.Fish
     {
         [Header("Look")]
         public Material material;
-        [Tooltip("Generated body, used when no model is set.")]
-        public FishBodyShape bodyShape = FishBodyShape.Sardine;
-        [Tooltip("Optional 3D model (prefab or model asset, one static mesh). When set, it replaces the generated body. " +
-                 "It is re-oriented, centred and scaled to a length of 1 automatically; the swimming wave is applied by the shader.")]
+        [Tooltip("3D model of the fish (prefab or model asset, one static mesh). It is re-oriented, centred and scaled " +
+                 "to a length of 1 automatically; the swimming wave is applied by the shader.")]
         public GameObject model;
         [Tooltip("Direction the fish's nose points to, in the model's own mesh space.")]
         public Vector3 modelForward = Vector3.forward;

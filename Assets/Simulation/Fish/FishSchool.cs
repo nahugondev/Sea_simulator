@@ -70,9 +70,11 @@ namespace SeaSim.Fish
 
         void OnEnable()
         {
-            if (species == null)
+            if (species == null || species.model == null)
             {
-                Debug.LogWarning($"{name}: no FishSpecies assigned, the school is disabled.", this);
+                Debug.LogWarning(species == null
+                    ? $"{name}: no FishSpecies assigned, the school is disabled."
+                    : $"{name}: species {species.name} has no 3D model, the school is disabled.", this);
                 enabled = false;
                 return;
             }

@@ -13,7 +13,7 @@ Créer une scène sous-marine vivante et crédible, étape par étape, pour un p
 
 ## Avancement
 
-- [x] **Bancs de poissons** : des milliers de sardines et de maquereaux qui nagent en bancs séparés et fuient un prédateur
+- [x] **Bancs de poissons** : des milliers de poissons de 16 espèces qui nagent en bancs séparés et fuient un prédateur
 - [ ] **Fond marin** : relief naturel, comme façonné par le temps (érosion)
 - [ ] **Vie sur le fond** : coraux, roches, relief
 - [ ] **Ambiance sous-marine** : eau trouble, distorsion, rayons de lumière
@@ -26,15 +26,15 @@ Créer une scène sous-marine vivante et crédible, étape par étape, pour un p
 - **Limites physiques** : rayon de virage minimal lié à la taille du corps, vitesse de croisière propre à chaque poisson
 - **Nage « battement puis glisse »** : la queue bat plus vite quand le poisson accélère et se calme quand il glisse
 - **Prédateur et fuite** : un prédateur chasse ; les poissons proches fuient sur les côtés, l'alerte se propage de voisin en voisin et le banc s'ouvre autour de lui
-- **Plusieurs espèces** (sardines et maquereaux pour l'instant) :
+- **Plusieurs espèces** (16 pour l'instant, dont 14 poissons tropicaux) :
   - aucun poisson n'en traverse un autre, quelle que soit son espèce ;
   - un banc ne contient qu'une seule espèce : deux bancs de la même espèce peuvent fusionner, deux bancs d'espèces différentes s'évitent ou se croisent ;
   - l'alerte face au prédateur passe d'une espèce à l'autre ;
-  - ajouter une espèce ne demande pas de code : un asset `FishSpecies` (forme, taille, couleurs, nage, comportement) et un `FishSchool` dans la scène
+  - ajouter une espèce ne demande pas de code : un modèle 3D, un asset `FishSpecies` (modèle, taille, nage, comportement) et un `FishSchool` dans la scène
 - Calcul en parallèle avec le **C# Job System** et **Burst**, avec une grille spatiale triée pour trouver les voisins rapidement
 - Affichage de tous les poissons en quelques appels grâce au **GPU instancing**
 - Nage animée directement dans le shader, pilotée par la simulation
-- Poissons générés par le code, sans modèle 3D externe
+- Vrais modèles 3D texturés : l'ondulation de la nage est appliquée par le shader, et chaque modèle est réorienté et mis à l'échelle automatiquement
 
 ## Enclave
 

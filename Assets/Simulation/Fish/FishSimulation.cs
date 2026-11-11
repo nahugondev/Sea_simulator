@@ -283,7 +283,7 @@ namespace SeaSim.Fish
                 var school = schools[p];
                 var material = school.Species.material;
                 if (material == null || school.FishCount == 0) continue;
-                var mesh = meshes[school.Species];
+                if (!meshes.TryGetValue(school.Species, out var mesh) || mesh == null) continue;
                 var batches = schoolBatchProperties[p];
                 for (int b = 0; b < batches.Length; b++)
                 {
