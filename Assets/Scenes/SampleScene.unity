@@ -154,8 +154,17 @@ MonoBehaviour:
   causticsIntensity: 2.5
   causticsFadeDepth: 120
   causticsFadeDistance: 45
+  causticsResolution: 1024
   fishCausticsStrength: 1
   fishCausticsWidth: 1.6
+  shaftIntensity: 1
+  shaftDensity: 0.03
+  shaftForwardScattering: 0.6
+  shaftCausticContrast: 1
+  shaftCausticWidth: 2.5
+  shaftMaxDistance: 45
+  shaftSteps: 32
+  bakeShader: {fileID: 4800000, guid: 3360aaf47483bcc469b88d92fd1e2d93, type: 3}
 --- !u!4 &35495547
 Transform:
   m_ObjectHideFlags: 0
