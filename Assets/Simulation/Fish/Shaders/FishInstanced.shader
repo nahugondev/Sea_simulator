@@ -145,7 +145,6 @@ Shader "SeaSim/FishInstanced"
             #pragma multi_compile_instancing
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
-            #pragma multi_compile_fog
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             #include "../../Water/Shaders/Caustics.hlsl"
@@ -158,8 +157,7 @@ Shader "SeaSim/FishInstanced"
                 float3 positionWS : TEXCOORD0;
                 float3 normalWS   : TEXCOORD1;
                 float2 uv         : TEXCOORD2;
-                float  fogFactor  : TEXCOORD3;
-                float  schoolLight : TEXCOORD4;
+                float  schoolLight : TEXCOORD3;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -179,7 +177,6 @@ Shader "SeaSim/FishInstanced"
                 o.positionWS = vp.positionWS;
                 o.normalWS = TransformObjectToWorldNormal(nrm);
                 o.uv = v.uv;
-                o.fogFactor = ComputeFogFactor(vp.positionCS.z);
                 return o;
             }
 
@@ -243,7 +240,6 @@ Shader "SeaSim/FishInstanced"
                 half schoolLight = i.schoolLight;
                 half scattered = lerp(1.0, schoolLight, 0.6);
                 half3 color = (diffuse + spec) * schoolLight + (ambient + sheen) * scattered;
-                color = MixFog(color, i.fogFactor);
                 return half4(color, 1);
             }
             ENDHLSL

@@ -16,7 +16,7 @@ Créer une scène sous-marine vivante et crédible, étape par étape, pour un p
 - [x] **Bancs de poissons** : des milliers de poissons de 16 espèces qui nagent en bancs séparés et fuient un prédateur
 - [ ] **Fond marin** : relief naturel, comme façonné par le temps (érosion)
 - [ ] **Vie sur le fond** : coraux, roches, relief
-- [ ] **Ambiance sous-marine** : eau trouble, distorsion, rayons de lumière
+- [ ] **Ambiance sous-marine** : eau trouble, rayons de lumière et caustiques (faits) ; distorsion (à venir)
 
 ## Bancs de poissons
 
@@ -44,6 +44,15 @@ Créer une scène sous-marine vivante et crédible, étape par étape, pour un p
 - Sol de sable en dunes douces, avec des rochers posés dessus
 - Textures réelles projetées sur les trois axes (triplanaire) avec l'éclairage PBR d'URP ; une seconde lecture de la texture à une autre échelle casse la répétition du motif
 - Tous les réglages (taille, relief, contour, plateau) se font dans l'Inspector de l'objet `Enclave`
+
+## Lumière et eau
+
+- **Caustiques** : le filet de lumière mouvant que les vagues projettent sur le sable, la roche et les poissons. Un seul motif, calculé une fois par image, est partagé par tout le décor
+- **Rayons de lumière** dans l'eau, accordés aux caustiques : ils tombent sur les lignes claires du sable, et les falaises et les bancs de poissons les coupent
+- **Poissons éclairés selon leur place dans le banc** : le dessus d'un banc dense reste clair, son cœur et son dessous sont plus sombres
+- **Eau trouble** : la lumière est absorbée couleur par couleur (le rouge disparaît en premier), les objets lointains s'adoucissent et virent au bleu-vert, et l'eau est plus claire vers la surface
+- Le tout coûte environ 0,5 ms par image avec 20 000 poissons
+- Réglages sur l'objet `UnderwaterLight` de la scène
 
 ## Crédits
 
