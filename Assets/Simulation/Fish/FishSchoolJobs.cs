@@ -14,6 +14,16 @@ namespace SeaSim.Fish
         public float length;
     }
 
+    /// <summary>Settings of the light filtering through schools (see <see cref="SteerJob"/>).</summary>
+    public struct SchoolLightData
+    {
+        public float3 sunDirection;  // toward the sun
+        public float opacity;        // share of the light each body in the cone above blocks (0..1)
+        public float coneWidth;      // width of that cone: tangent of its half-angle (1 = 45 degrees)
+        public float response;       // how fast a fish's light follows its position in the school (1/s)
+        public float minimum;        // darkest a fish can get (0..1)
+    }
+
     /// <summary>The single swimming volume shared by every fish (the enclave's), with its soft containment margin.</summary>
     public struct SwimVolumeData
     {
@@ -62,6 +72,10 @@ namespace SeaSim.Fish
     ///   fish of the same species. Fish of other species are steered away from, so schools avoid or cross each other.
     /// - Predators: fish that see one flee sideways ('fountain effect'). Panic spreads from neighbour to neighbour,
     ///   across species too: a fleeing fish is an alarm signal for every fish around it.
+    /// - Light inside schools: a fish with bodies above it (toward the sun) only gets the light that reaches them,
+    ///   minus what their bodies block. Read from last frame's values, so shade spreads down through a whole school
+    ///   from neighbour to neighbour, like the alarm: the top of a dense school stays bright, its core and underside
+    ///   darken. The result goes to the shader through the swim state.
     /// </summary>
     [BurstCompile(FloatMode = FloatMode.Fast)]
     struct SteerJob : IJobParallelFor
@@ -73,9 +87,11 @@ namespace SeaSim.Fish
         [ReadOnly] public NativeArray<float> sortedScales;
         [ReadOnly] public NativeArray<float> sortedPanic;
         [ReadOnly] public NativeArray<int> sortedSpecies;
+        [ReadOnly] public NativeArray<float> sortedLight;
         [ReadOnly] public NativeArray<float> cruiseSpeeds;     // original index
         [ReadOnly] public NativeArray<SpeciesData> species;
         public SwimVolumeData volume;
+        public SchoolLightData schoolLight;
         [ReadOnly] public NativeArray<PredatorState> predators;
 
         // Indexed by original fish index (order[s]), hence not by the job index.
@@ -83,6 +99,7 @@ namespace SeaSim.Fish
         [WriteOnly, NativeDisableParallelForRestriction] public NativeArray<float> desiredSpeeds;
         [WriteOnly, NativeDisableParallelForRestriction] public NativeArray<float3> corrections;
         [WriteOnly, NativeDisableParallelForRestriction] public NativeArray<float> newPanic;
+        [WriteOnly, NativeDisableParallelForRestriction] public NativeArray<float> newLight;
 
         public GridLayout layout;
         [Tooltip("Cells to scan on each side in pass 1 (the cell size covers the largest body reach of all species).")]
@@ -112,6 +129,7 @@ namespace SeaSim.Fish
             var neighbourDistSq = new FixedList128Bytes<float>();
             float3 separation = 0, correction = 0, otherSpeciesAway = 0;
             float otherSpeciesPanic = 0f;
+            float coverWeight = 0f, coverLight = 0f; // bodies between this fish and the sun, and the light they get
 
             // ---- Pass 1, the cells within body reach ----
             // Cells are numbered x first, so each (y, z) row of cells is one contiguous range of sorted fish.
@@ -145,6 +163,17 @@ namespace SeaSim.Fish
                         candidates++;
                         // Bodies never overlap, whatever the species.
                         AvoidBody(t, p, halfSegI, lengthI, boids, offset, distSq, ref separation, ref correction);
+
+                        // Bodies in a cone above this fish, toward the sun, filter its light (whatever the species).
+                        // Closer to the cone's axis = more in the way.
+                        float up = math.dot(offset, schoolLight.sunDirection);
+                        if (up > 0f)
+                        {
+                            float side = math.sqrt(math.max(distSq - up * up, 0f));
+                            float w = math.saturate(1f - side / (up * schoolLight.coneWidth));
+                            coverWeight += w;
+                            coverLight += w * sortedLight[t];
+                        }
 
                         if (!sameSpecies)
                         {
@@ -245,6 +274,19 @@ namespace SeaSim.Fish
                 ? math.lerp(oldPanic, target, math.saturate(deltaTime * escape.alarmSpreadRate))
                 : math.max(target, oldPanic - deltaTime / escape.panicDecayTime);
             newPanic[i] = p01;
+
+            // ---- Light reaching this fish: what reaches the bodies above it, minus what those bodies block ----
+            // Beer-Lambert: each body in the cone lets (1 - opacity) of the light through.
+            float lightTarget = 1f;
+            if (coverWeight > 1e-4f)
+            {
+                float upstream = coverLight / coverWeight;
+                lightTarget = math.lerp(1f, upstream, math.saturate(coverWeight))
+                            * math.pow(1f - schoolLight.opacity, coverWeight);
+            }
+            float oldLight = sortedLight[s];
+            newLight[i] = math.max(schoolLight.minimum,
+                math.lerp(oldLight, lightTarget, math.saturate(deltaTime * schoolLight.response)));
 
             // ---- Desired speed: own cruising speed, matched to neighbours, boosted by panic ----
             float burst = swim.burstSpeed * lengthI;
@@ -400,6 +442,7 @@ namespace SeaSim.Fish
         [ReadOnly] public NativeArray<float3> corrections;
         [ReadOnly] public NativeArray<float> scales;
         [ReadOnly] public NativeArray<float> panic;
+        [ReadOnly] public NativeArray<float> light;
         [ReadOnly] public NativeArray<int> fishSpecies;
         public SwimVolumeData volume;
         [ReadOnly] public NativeArray<SpeciesData> species;
@@ -460,6 +503,7 @@ namespace SeaSim.Fish
             float tailBeatsPerSecond = speed / math.max(swim.strideLength * L, 1e-3f);
             s.x += TwoPi * tailBeatsPerSecond * math.lerp(0.4f, 1f, s.y) * deltaTime;
             s.x -= TwoPi * math.floor(s.x / TwoPi);
+            s.z = light[i]; // light reaching the fish inside its school (1 = full)
             swimStates[i] = s;
 
             // ---- Render matrix, with a slight bank into turns ----

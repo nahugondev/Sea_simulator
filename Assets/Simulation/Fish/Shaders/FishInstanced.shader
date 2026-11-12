@@ -65,9 +65,20 @@ Shader "SeaSim/FishInstanced"
         CBUFFER_END
 
         #if defined(UNITY_INSTANCING_ENABLED)
-            StructuredBuffer<float4> _FishSwimState; // per fish: x = tail phase (rad), y = effort (0..1)
+            // per fish: x = tail phase (rad), y = effort (0..1), z = light reaching the fish inside its school (0..1)
+            StructuredBuffer<float4> _FishSwimState;
             float _FishInstanceOffset;               // first fish of the current draw batch
         #endif
+
+        // Share of the sunlight reaching this fish through the bodies above it (1 outside schools / not instanced).
+        float GetSchoolLight()
+        {
+        #if defined(UNITY_INSTANCING_ENABLED)
+            return _FishSwimState[unity_InstanceID + (uint)_FishInstanceOffset].z;
+        #else
+            return 1.0;
+        #endif
+        }
 
         // Tail phase (radians) and effort (amplitude multiplier, low while gliding).
         void GetSwimState(out float phase, out float effort)
@@ -134,9 +145,9 @@ Shader "SeaSim/FishInstanced"
             #pragma multi_compile_instancing
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
-            #pragma multi_compile_fog
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "../../Water/Shaders/Caustics.hlsl"
 
             TEXTURE2D(_BaseMap); SAMPLER(sampler_BaseMap);
 
@@ -146,7 +157,7 @@ Shader "SeaSim/FishInstanced"
                 float3 positionWS : TEXCOORD0;
                 float3 normalWS   : TEXCOORD1;
                 float2 uv         : TEXCOORD2;
-                float  fogFactor  : TEXCOORD3;
+                float  schoolLight : TEXCOORD3;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -155,6 +166,7 @@ Shader "SeaSim/FishInstanced"
                 Varyings o = (Varyings)0;
                 UNITY_SETUP_INSTANCE_ID(v);
                 UNITY_TRANSFER_INSTANCE_ID(v, o);
+                o.schoolLight = GetSchoolLight();
 
                 float3 pos = v.positionOS.xyz;
                 float3 nrm = v.normalOS;
@@ -165,7 +177,6 @@ Shader "SeaSim/FishInstanced"
                 o.positionWS = vp.positionWS;
                 o.normalWS = TransformObjectToWorldNormal(nrm);
                 o.uv = v.uv;
-                o.fogFactor = ComputeFogFactor(vp.positionCS.z);
                 return o;
             }
 
@@ -202,15 +213,21 @@ Shader "SeaSim/FishInstanced"
                 }
 
                 Light mainLight = GetMainLight(TransformWorldToShadowCoord(i.positionWS));
-                half atten = mainLight.distanceAttenuation * mainLight.shadowAttenuation;
+                // Only the shadow: the main light is the sun, whose distance attenuation is always 1. URP reads that
+                // value from per-object data (unity_LightData) that GPU-instanced draws (RenderMeshInstanced) do not
+                // fill: it is 0 there, which silently removed all direct sunlight from the fish.
+                half atten = mainLight.shadowAttenuation;
                 // Wrapped diffuse: light scattered by the water reaches the sides of the body too.
                 half ndl = saturate((dot(n, mainLight.direction) + 0.4) / 1.4);
-                half3 diffuse = albedo * mainLight.color * ndl * atten;
+                // Caustics glide over the fish as it swims through the light web: the direct sunlight (wrapped, so the
+                // flanks catch it too) gets brighter on the lines and darker between them. No effect in shadows.
+                half caustics = CausticsFish(i.positionWS, mainLight.direction);
+                half3 diffuse = albedo * mainLight.color * ndl * atten * caustics;
                 half3 ambient = albedo * SampleSH(n);
 
                 float3 halfDir = normalize(mainLight.direction + viewDir);
                 half specPower = exp2(10.0 * _Smoothness + 1.0);
-                half3 spec = mainLight.color * pow(saturate(dot(n, halfDir)), specPower) * _Smoothness * atten;
+                half3 spec = mainLight.color * pow(saturate(dot(n, halfDir)), specPower) * _Smoothness * atten * caustics;
 
                 // Silvery, mirror-like flanks: fish scales reflect the bright water around them.
                 // Strong on the belly and sides, weak on the dark back.
@@ -218,8 +235,11 @@ Shader "SeaSim/FishInstanced"
                 half silver = lerp(1.0, 0.2, smoothstep(0.0, 0.7, h));
                 half3 sheen = SampleSH(reflect(-viewDir, n)) * (0.35 + 0.65 * fresnel) * silver * _Sheen;
 
-                half3 color = diffuse + ambient + spec + sheen;
-                color = MixFog(color, i.fogFactor);
+                // Inside a school, the bodies above filter the sunlight (fully) and the light scattered from the
+                // surface (partly: some still comes in from the sides).
+                half schoolLight = i.schoolLight;
+                half scattered = lerp(1.0, schoolLight, 0.6);
+                half3 color = (diffuse + spec) * schoolLight + (ambient + sheen) * scattered;
                 return half4(color, 1);
             }
             ENDHLSL

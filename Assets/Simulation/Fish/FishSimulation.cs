@@ -29,6 +29,17 @@ namespace SeaSim.Fish
         [Tooltip("Depth (m) of the band inside the volume's edges where fish start turning back.")]
         [SerializeField, Min(0.1f)] float volumeMargin = 4f;
 
+        [Header("Light inside schools")]
+        [Tooltip("Share of the sunlight each fish in the cone above another one blocks. Light that crosses several " +
+                 "layers of bodies is filtered several times, so the core and underside of a dense school get darker.")]
+        [SerializeField, Range(0f, 0.5f)] float schoolOpacity = 0.06f;
+        [Tooltip("Width of the cone, toward the sun, in which fish shade each other (tangent of its half-angle: 1 = 45°).")]
+        [SerializeField, Range(0.2f, 2f)] float shadeConeWidth = 1f;
+        [Tooltip("How fast a fish's light follows its position in the school (1/s).")]
+        [SerializeField, Min(0.1f)] float lightResponse = 3f;
+        [Tooltip("Darkest a fish can get inside a school (fraction of full light).")]
+        [SerializeField, Range(0f, 1f)] float minimumLight = 0.4f;
+
         bool missingEnclaveWarned;
         Bounds drawBounds;
 
@@ -65,7 +76,7 @@ namespace SeaSim.Fish
 
         // Per fish (original index)
         NativeArray<float3> positions, velocities, desiredDirections, corrections;
-        NativeArray<float> scales, cruiseSpeeds, desiredSpeeds, panic, newPanic;
+        NativeArray<float> scales, cruiseSpeeds, desiredSpeeds, panic, newPanic, light, newLight;
         NativeArray<int> fishSpecies;
         NativeArray<byte> beating;
         NativeArray<float4> swimStates;
@@ -73,7 +84,7 @@ namespace SeaSim.Fish
         // Sorted spatial grid (see GridLayout): fish sorted by cell, with contiguous copies of their data.
         NativeArray<int> fishCell, order, cellStart, cellCursor;
         NativeArray<float3> sortedPositions, sortedVelocities;
-        NativeArray<float> sortedScales, sortedPanic;
+        NativeArray<float> sortedScales, sortedPanic, sortedLight;
         NativeArray<int> sortedSpecies;
         // Per species
         NativeArray<SpeciesData> speciesData;
@@ -129,6 +140,7 @@ namespace SeaSim.Fish
         internal NativeArray<float3>.ReadOnly GetPositions(int start, int count) => Slice(positions, start, count);
         internal NativeArray<float3>.ReadOnly GetVelocities(int start, int count) => Slice(velocities, start, count);
         internal NativeArray<float>.ReadOnly GetPanic(int start, int count) => Slice(panic, start, count);
+        internal NativeArray<float>.ReadOnly GetLight(int start, int count) => Slice(light, start, count);
 
         NativeArray<T>.ReadOnly Slice<T>(NativeArray<T> array, int start, int count) where T : unmanaged
         {
@@ -183,6 +195,14 @@ namespace SeaSim.Fish
                 reach = math.max(reach, maxLength * (1f + 2f * sp.schooling.bodyRadius * math.max(1f, sp.schooling.bodyHeightRatio) + sp.schooling.personalSpace));
             }
             drawBounds = new Bounds(swimVolume.center, swimVolume.size + Vector3.one * 2f);
+            var schoolLightData = new SchoolLightData
+            {
+                sunDirection = SunDirection(),
+                opacity = schoolOpacity,
+                coneWidth = shadeConeWidth,
+                response = lightResponse,
+                minimum = minimumLight,
+            };
             var volumeData = new SwimVolumeData { center = swimVolume.center, extents = swimVolume.extents, margin = volumeMargin };
 
             var layout = GridLayout.Create(swimVolume.center, swimVolume.size, reach / ReachCells, MaxGridCells);
@@ -210,12 +230,14 @@ namespace SeaSim.Fish
                 velocities = velocities,
                 scales = scales,
                 panic = panic,
+                light = light,
                 species = fishSpecies,
                 sortedPositions = sortedPositions,
                 sortedVelocities = sortedVelocities,
                 sortedScales = sortedScales,
                 sortedPanic = sortedPanic,
                 sortedSpecies = sortedSpecies,
+                sortedLight = sortedLight,
             }.Schedule(fishCount, 256, sortJob);
 
             var steerJob = new SteerJob
@@ -227,6 +249,7 @@ namespace SeaSim.Fish
                 sortedScales = sortedScales,
                 sortedPanic = sortedPanic,
                 sortedSpecies = sortedSpecies,
+                sortedLight = sortedLight,
                 cruiseSpeeds = cruiseSpeeds,
                 species = speciesData,
                 volume = volumeData,
@@ -235,6 +258,8 @@ namespace SeaSim.Fish
                 desiredSpeeds = desiredSpeeds,
                 corrections = corrections,
                 newPanic = newPanic,
+                newLight = newLight,
+                schoolLight = schoolLightData,
                 layout = layout,
                 nearCells = nearCells,
                 time = Time.time,
@@ -253,6 +278,7 @@ namespace SeaSim.Fish
                 corrections = corrections,
                 scales = scales,
                 panic = newPanic,
+                light = newLight,
                 fishSpecies = fishSpecies,
                 volume = volumeData,
                 species = speciesData,
@@ -262,6 +288,13 @@ namespace SeaSim.Fish
 
             // Let the jobs run on worker threads while the main thread does other work.
             JobHandle.ScheduleBatchedJobs();
+        }
+
+        /// <summary>Direction toward the sun (the scene's main directional light), straight up without one.</summary>
+        static float3 SunDirection()
+        {
+            var sun = RenderSettings.sun;
+            return sun != null ? -(float3)sun.transform.forward : new float3(0f, 1f, 0f);
         }
 
         void LateUpdate()
@@ -276,6 +309,7 @@ namespace SeaSim.Fish
             LastSimulationMilliseconds = (float)((Time.realtimeSinceStartupAsDouble - scheduleTime) * 1000.0);
             // The panic computed this frame becomes the input of the next one.
             (panic, newPanic) = (newPanic, panic);
+            (light, newLight) = (newLight, light);
 
             swimBuffer.SetData(swimStates);
             for (int p = 0; p < schools.Count; p++)
@@ -334,6 +368,8 @@ namespace SeaSim.Fish
             desiredSpeeds = new NativeArray<float>(n, Allocator.Persistent);
             panic = new NativeArray<float>(n, Allocator.Persistent);
             newPanic = new NativeArray<float>(n, Allocator.Persistent);
+            light = new NativeArray<float>(n, Allocator.Persistent);
+            newLight = new NativeArray<float>(n, Allocator.Persistent);
             fishSpecies = new NativeArray<int>(n, Allocator.Persistent);
             beating = new NativeArray<byte>(n, Allocator.Persistent);
             swimStates = new NativeArray<float4>(n, Allocator.Persistent);
@@ -344,6 +380,7 @@ namespace SeaSim.Fish
             sortedVelocities = new NativeArray<float3>(n, Allocator.Persistent);
             sortedScales = new NativeArray<float>(n, Allocator.Persistent);
             sortedPanic = new NativeArray<float>(n, Allocator.Persistent);
+            sortedLight = new NativeArray<float>(n, Allocator.Persistent);
             sortedSpecies = new NativeArray<int>(n, Allocator.Persistent);
             speciesData = new NativeArray<SpeciesData>(speciesList.Count, Allocator.Persistent);
             // Cell arrays are sized in Update, once the grid layout is known.
@@ -402,7 +439,8 @@ namespace SeaSim.Fish
                 velocities[i] = math.normalizesafe(clusterHeadings[c] + rng.NextFloat3Direction() * 0.3f) * cruiseSpeeds[i];
                 fishSpecies[i] = speciesIndex;
                 beating[i] = (byte)(rng.NextBool() ? 1 : 0);
-                swimStates[i] = new float4(rng.NextFloat(0f, 6.2831853f), 1f, 0f, 0f);
+                light[i] = 1f;
+                swimStates[i] = new float4(rng.NextFloat(0f, 6.2831853f), 1f, 1f, 0f);
                 matrices[i] = Matrix4x4.TRS(positions[i], Quaternion.LookRotation(velocities[i]), Vector3.one * length);
             }
         }
@@ -418,6 +456,8 @@ namespace SeaSim.Fish
             if (desiredSpeeds.IsCreated) desiredSpeeds.Dispose();
             if (panic.IsCreated) panic.Dispose();
             if (newPanic.IsCreated) newPanic.Dispose();
+            if (light.IsCreated) light.Dispose();
+            if (newLight.IsCreated) newLight.Dispose();
             if (fishSpecies.IsCreated) fishSpecies.Dispose();
             if (beating.IsCreated) beating.Dispose();
             if (swimStates.IsCreated) swimStates.Dispose();
@@ -430,6 +470,7 @@ namespace SeaSim.Fish
             if (sortedVelocities.IsCreated) sortedVelocities.Dispose();
             if (sortedScales.IsCreated) sortedScales.Dispose();
             if (sortedPanic.IsCreated) sortedPanic.Dispose();
+            if (sortedLight.IsCreated) sortedLight.Dispose();
             if (sortedSpecies.IsCreated) sortedSpecies.Dispose();
             if (speciesData.IsCreated) speciesData.Dispose();
             swimBuffer?.Release();

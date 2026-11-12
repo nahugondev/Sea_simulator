@@ -58,11 +58,11 @@ Shader "SeaSim/EnclaveTriplanar"
             #pragma fragment frag
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
-            #pragma multi_compile_fog
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             #include "EnvironmentNoise.hlsl"
+            #include "../../Water/Shaders/Caustics.hlsl"
 
             TEXTURE2D(_BaseMap);      SAMPLER(sampler_BaseMap);
             TEXTURE2D(_NormalMap);    SAMPLER(sampler_NormalMap);
@@ -93,7 +93,6 @@ Shader "SeaSim/EnclaveTriplanar"
                 float3 positionWS : TEXCOORD0;
                 float3 normalWS   : TEXCOORD1;
                 float2 uv         : TEXCOORD2;
-                float  fogFactor  : TEXCOORD3;
             };
 
             Varyings vert(Attributes v)
@@ -104,7 +103,6 @@ Shader "SeaSim/EnclaveTriplanar"
                 o.positionWS = vp.positionWS;
                 o.normalWS = TransformObjectToWorldNormal(v.normalOS);
                 o.uv = v.uv;
-                o.fogFactor = ComputeFogFactor(vp.positionCS.z);
                 return o;
             }
 
@@ -194,7 +192,6 @@ Shader "SeaSim/EnclaveTriplanar"
                 inputData.normalWS = n;
                 inputData.viewDirectionWS = GetWorldSpaceNormalizeViewDir(p);
                 inputData.shadowCoord = TransformWorldToShadowCoord(p);
-                inputData.fogCoord = i.fogFactor;
                 inputData.bakedGI = SampleSH(n);
                 inputData.normalizedScreenSpaceUV = GetNormalizedScreenSpaceUV(i.positionCS);
                 inputData.shadowMask = half4(1, 1, 1, 1);
@@ -207,7 +204,13 @@ Shader "SeaSim/EnclaveTriplanar"
                 surface.alpha = 1;
 
                 half4 color = UniversalFragmentPBR(inputData, surface);
-                color.rgb = MixFog(color.rgb, i.fogFactor);
+
+                // Caustics: extra sunlight focused by the surface waves, only where the sun reaches (shadows).
+                Light sun = GetMainLight(inputData.shadowCoord);
+                half sunFacing = saturate(dot(n, sun.direction));
+                color.rgb += albedo * sun.color * (sunFacing * sun.shadowAttenuation * occlusion)
+                           * Caustics(p, sun.direction);
+
                 return half4(color.rgb, 1);
             }
             ENDHLSL
