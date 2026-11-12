@@ -925,13 +925,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: SeaSim.Simulation::SeaSim.Fish.FishPredator
   material: {fileID: 2100000, guid: 50c9d3683f4bbe5419bc9e043a3e775d, type: 2}
-  bodyShape:
-    halfHeight: 0.075
-    halfWidth: 0.05
-    bodyEnd: 0.88
-    tailSize: 1.9
-    dorsalFinSize: 1.4
+  model: {fileID: 919132149155446097, guid: d10f27932dd3a8b4da0d5641cda0a2c7, type: 3}
+  modelForward: {x: 0, y: 0, z: -1}
+  modelUp: {x: 0, y: 1, z: 0}
   length: 1.2
+  count: 1
+  spacing: 4
   cruiseSpeed: 1.2
   attackSpeed: 5
   acceleration: 4

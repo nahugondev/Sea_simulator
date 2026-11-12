@@ -25,7 +25,7 @@ Créer une scène sous-marine vivante et crédible, étape par étape, pour un p
 - Chaque poisson est traité comme une capsule (et non un point) pour éviter que les corps se chevauchent
 - **Limites physiques** : rayon de virage minimal lié à la taille du corps, vitesse de croisière propre à chaque poisson
 - **Nage « battement puis glisse »** : la queue bat plus vite quand le poisson accélère et se calme quand il glisse
-- **Prédateur et fuite** : un prédateur chasse ; les poissons proches fuient sur les côtés, l'alerte se propage de voisin en voisin et le banc s'ouvre autour de lui
+- **Prédateur et fuite** : un requin (modélisé dans Blender par script, `Tools/Blender/build_shark.py`) chasse ; les poissons proches fuient sur les côtés, l'alerte se propage de voisin en voisin et le banc s'ouvre autour de lui
 - **Plusieurs espèces** (16 pour l'instant, dont 14 poissons tropicaux) :
   - aucun poisson n'en traverse un autre, quelle que soit son espèce ;
   - un banc ne contient qu'une seule espèce : deux bancs de la même espèce peuvent fusionner, deux bancs d'espèces différentes s'évitent ou se croisent ;
