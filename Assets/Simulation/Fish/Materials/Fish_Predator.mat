@@ -22,19 +22,24 @@ Material:
   m_LockedProperties: 
   m_SavedProperties:
     serializedVersion: 3
-    m_TexEnvs: []
+    m_TexEnvs:
+    - _BaseMap:
+        m_Texture: {fileID: 2800000, guid: 623e16315fb560545aadb198a1995962, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
+    - _ColorVariation: 0.7
     - _HeadAmplitude: 0.012
-    - _Sheen: 1.2
-    - _Smoothness: 0.75
+    - _ShapeVariation: 0.5
+    - _Sheen: 0.4
+    - _Smoothness: 0.5
     - _SwimAmplitude: 0.06
     - _SwimFrequency: 2.2
     - _WaveCount: 0.75
+    - _WearAmount: 0.7
     m_Colors:
-    - _BackColor: {r: 0.06, g: 0.1, b: 0.14, a: 1}
-    - _BellyColor: {r: 0.62, g: 0.66, b: 0.68, a: 1}
-    - _StripeColor: {r: 0.25, g: 0.32, b: 0.35, a: 1}
+    - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
     - _SwimState: {r: 0, g: 1, b: 0, a: 0}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

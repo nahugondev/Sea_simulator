@@ -20,10 +20,24 @@ namespace SeaSim.Fish
         enum Mode { Patrol, Chase }
 
         [Header("Look")]
+        [Tooltip("SeaSim/FishInstanced material, with Use Texture on for the model's texture.")]
         [SerializeField] Material material;
-        [SerializeField] FishBodyShape bodyShape = FishBodyShape.Predator;
+        [Tooltip("3D model of the predator (one static mesh). It is re-oriented, centred and scaled to the length below; " +
+                 "the swimming wave is applied by the shader.")]
+        [SerializeField] GameObject model;
+        [Tooltip("Direction the nose points to, in the model's own mesh space.")]
+        [SerializeField] Vector3 modelForward = Vector3.forward;
+        [Tooltip("Direction of the back (dorsal side), in the model's own mesh space.")]
+        [SerializeField] Vector3 modelUp = Vector3.up;
         [Tooltip("Length in metres.")]
         [SerializeField, Min(0.05f)] float length = 1.2f;
+
+        [Header("Count")]
+        [Tooltip("Number of predators. Extra ones are copies of this one, spawned at Play at random places in the " +
+                 "swimming volume. Predators only hunt fish and keep a little distance from each other.")]
+        [SerializeField, Range(1, 20)] int count = 1;
+        [Tooltip("Distance (m) predators try to keep between each other.")]
+        [SerializeField, Min(0f)] float spacing = 4f;
 
         [Header("Movement")]
         [Tooltip("Patrol speed (m/s).")]
@@ -58,6 +72,9 @@ namespace SeaSim.Fish
         MaterialPropertyBlock properties;
         Mesh mesh;
         Unity.Mathematics.Random rng;
+        float noiseSeed;
+        readonly List<GameObject> copies = new List<GameObject>();
+        static bool spawningCopies;
 
         public PredatorState State => new PredatorState
         {
@@ -70,6 +87,8 @@ namespace SeaSim.Fish
         {
             active.Add(this);
             rng = new Unity.Mathematics.Random((uint)(GetHashCode() | 1));
+            noiseSeed = rng.NextFloat(0f, 1000f);
+            if (!spawningCopies) SpawnCopies();
             startPosition = transform.position;
             direction = math.normalizesafe((float3)transform.forward, new float3(0, 0, 1));
             speed = cruiseSpeed;
@@ -83,11 +102,40 @@ namespace SeaSim.Fish
             active.Remove(this);
             if (body != null) Destroy(body.gameObject);
             if (mesh != null) Destroy(mesh);
+            foreach (var copy in copies) if (copy != null) Destroy(copy);
+            copies.Clear();
+        }
+
+        /// <summary>Creates count - 1 copies of this predator, at random places in the swimming volume.</summary>
+        void SpawnCopies()
+        {
+            if (!Application.isPlaying || count <= 1) return;
+            Bounds area = FishSimulation.Instance != null && FishSimulation.Instance.TryGetSwimVolume(out Bounds volume)
+                ? volume : new Bounds(transform.position, new Vector3(20f, 6f, 20f));
+            spawningCopies = true;
+            try
+            {
+                for (int i = 1; i < count; i++)
+                {
+                    float3 p = (float3)area.center + (rng.NextFloat3() * 2f - 1f) * (float3)area.extents * new float3(0.6f, 0.4f, 0.6f);
+                    float heading = rng.NextFloat(0f, 360f);
+                    var copy = Instantiate(gameObject, p, Quaternion.Euler(0f, heading, 0f), transform.parent);
+                    copy.name = $"{name} {i + 1}";
+                    copy.hideFlags = HideFlags.DontSave;
+                    copies.Add(copy);
+                }
+            }
+            finally { spawningCopies = false; }
         }
 
         void BuildBody()
         {
-            mesh = FishMeshBuilder.Build(bodyShape);
+            mesh = model != null ? FishMeshBuilder.FromModel(model, modelForward, modelUp) : null;
+            if (mesh == null)
+            {
+                Debug.LogError($"{name}: no model, or its mesh is not readable (enable Read/Write in the model's import settings).", this);
+                return;
+            }
             var go = new GameObject("Body");
             go.hideFlags = HideFlags.DontSave;
             body = go.transform;
@@ -149,6 +197,7 @@ namespace SeaSim.Fish
             swimEffort = math.lerp(swimEffort, speed >= oldSpeed - 1e-4f ? 1f : 0.3f, math.saturate(dt * 6f));
             swimPhase += 2f * math.PI * speed / (strideLength * length) * math.lerp(0.4f, 1f, swimEffort) * dt;
             swimPhase %= 2f * math.PI;
+            if (bodyRenderer == null) return;
             properties.SetVector(SwimStateId, new Vector4(swimPhase, swimEffort, 1f, 0f));
             bodyRenderer.SetPropertyBlock(properties);
         }
@@ -170,12 +219,20 @@ namespace SeaSim.Fish
             float3 local = position - center;
             float3 inner = (float3)area.extents * 0.7f;
 
-            float t = Time.time * 0.1f;
+            float t = Time.time * 0.1f + noiseSeed; // each predator wanders its own way
             float3 wander = new float3(
                 noise.snoise(new float2(t, 1.7f)),
                 noise.snoise(new float2(t, 9.2f)) * 0.2f,
                 noise.snoise(new float2(t, 4.4f)));
             float3 desired = direction + wander * 0.6f;
+            // Keep some distance from the other predators.
+            foreach (var other in active)
+            {
+                if (other == this) continue;
+                float3 away = position - (float3)other.transform.position;
+                float d = math.length(away);
+                if (d < spacing && d > 1e-4f) desired += away / d * (1f - d / spacing) * 2f;
+            }
             // Head back toward the centre when leaving the inner part of the territory.
             float3 over = math.max(math.abs(local) - inner, 0f) / math.max((float3)area.extents - inner, 0.01f);
             desired += -math.sign(local) * over * 2f;

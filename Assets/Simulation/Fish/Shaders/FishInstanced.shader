@@ -1,16 +1,14 @@
 // Instanced fish shader for URP.
 // - Swimming: a travelling sine wave is applied in the vertex shader. Its amplitude grows from head to tail.
 //   The position along the body is read from the geometry (s = 0.5 - z: the fish points along +Z, is 1 unit
-//   long and centred), so the same wave drives the generated bodies and imported 3D models alike.
+//   long and centred), so the same wave drives every 3D model alike.
 //   * Instanced (FishSchool): the tail phase and effort of each fish come from the simulation, through the
 //     _FishSwimState StructuredBuffer, so the tail beat follows the fish's speed (burst and glide).
 //     Only use GPU instancing with this shader through FishSchool, which binds that buffer.
 //   * Not instanced (e.g. FishPredator): _SwimState = (phase, effort, useIt, 0) set from a MaterialPropertyBlock;
 //     when _SwimState.z is 0 the tail simply beats at _SwimFrequency.
-// - Colour, either:
-//   * generated: counter-shading, dark back and silvery belly (UV0.y = -1 belly .. +1 back), stripe and bars;
-//   * textured (Use Texture on, for imported models): the model's own texture, through its own UVs.
-//   Both get a fresnel sheen, stronger on the flanks and belly than on the back.
+// - Colour: the model's own texture, through its own UVs, with a fresnel sheen stronger on the flanks and belly
+//   than on the back.
 // - Variation between fish: each fish gets fixed random values from its index (no extra data), which drive
 //   * its proportions: slightly deeper or slimmer body, larger or smaller tail (same in every pass),
 //   * its colour: brightness, saturation and hue shifted a little,
@@ -20,18 +18,9 @@ Shader "SeaSim/FishInstanced"
 {
     Properties
     {
-        [Header(Texture (imported models))]
-        [Toggle] _UseBaseMap ("Use Texture", Float) = 0
+        [Header(Look)]
         _BaseMap ("Texture", 2D) = "white" {}
         _BaseColor ("Texture Tint", Color) = (1, 1, 1, 1)
-
-        [Header(Generated colours)]
-        _BackColor ("Back Color", Color) = (0.10, 0.20, 0.28, 1)
-        _BellyColor ("Belly Color", Color) = (0.78, 0.82, 0.85, 1)
-        _StripeColor ("Lateral Stripe Color", Color) = (0.35, 0.55, 0.65, 1)
-        _BackBarColor ("Back Bars Color", Color) = (0.03, 0.06, 0.08, 1)
-        _BackBarCount ("Back Bars Count (0 = none)", Float) = 0
-        _BackBarStrength ("Back Bars Strength", Range(0, 1)) = 0.8
         _Smoothness ("Smoothness", Range(0, 1)) = 0.75
         _Sheen ("Silver Sheen", Range(0, 4)) = 2.0
 
@@ -58,13 +47,6 @@ Shader "SeaSim/FishInstanced"
         CBUFFER_START(UnityPerMaterial)
             float4 _BaseMap_ST;
             half4 _BaseColor;
-            half _UseBaseMap;
-            half4 _BackColor;
-            half4 _BellyColor;
-            half4 _StripeColor;
-            half4 _BackBarColor;
-            half _BackBarCount;
-            half _BackBarStrength;
             half _Smoothness;
             half _Sheen;
             float _SwimFrequency;
@@ -297,31 +279,9 @@ Shader "SeaSim/FishInstanced"
                 float3 n = normalize(i.normalWS) * (isFrontFace ? 1.0 : -1.0);
                 float3 viewDir = GetWorldSpaceNormalizeViewDir(i.positionWS);
 
-                half3 albedo;
-                half h; // -1 belly .. +1 back, drives the silver sheen
-                if (_UseBaseMap > 0.5)
-                {
-                    // Imported model: its own texture. Fish swim level, so the world normal tells back from belly.
-                    albedo = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, TRANSFORM_TEX(i.uv, _BaseMap)).rgb * _BaseColor.rgb;
-                    h = n.y;
-                }
-                else
-                {
-                    // Counter-shading + a soft lateral stripe.
-                    h = i.uv.y;
-                    albedo = lerp(_BellyColor.rgb, _BackColor.rgb, smoothstep(-0.15, 0.55, h));
-                    half stripe = exp(-pow((h - 0.2) * 9.0, 2.0)) * smoothstep(0.1, 0.3, i.uv.x) * (1.0 - smoothstep(0.75, 0.86, i.uv.x));
-                    albedo = lerp(albedo, _StripeColor.rgb, stripe * 0.6);
-
-                    // Optional wavy dark bars across the back (e.g. mackerel), fading toward the flanks and the tail.
-                    if (_BackBarCount > 0.5)
-                    {
-                        half wave = sin(i.uv.x * _BackBarCount * 6.2831853 + sin(h * 7.0) * 1.6);
-                        half bars = smoothstep(0.15, 0.55, wave);
-                        half mask = smoothstep(0.15, 0.55, h) * smoothstep(0.08, 0.2, i.uv.x) * (1.0 - smoothstep(0.78, 0.86, i.uv.x));
-                        albedo = lerp(albedo, _BackBarColor.rgb, bars * mask * _BackBarStrength);
-                    }
-                }
+                // The model's own texture. Fish swim level, so the world normal tells back from belly.
+                half3 albedo = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, TRANSFORM_TEX(i.uv, _BaseMap)).rgb * _BaseColor.rgb;
+                half h = n.y; // -1 belly .. +1 back, drives the silver sheen
 
                 half shine = Individualise(albedo, i.bodyPos, i.colorRandom, i.wearRandom);
 

@@ -3,34 +3,10 @@ using UnityEngine;
 
 namespace SeaSim.Fish
 {
-    /// <summary>Silhouette of a procedural fish. All values are fractions of the fish length.</summary>
-    [System.Serializable]
-    public struct FishBodyShape
-    {
-        [Tooltip("Half-height of the body.")]
-        [Range(0.03f, 0.3f)] public float halfHeight;
-        [Tooltip("Half-width of the body (fish are laterally compressed).")]
-        [Range(0.02f, 0.2f)] public float halfWidth;
-        [Tooltip("Where the body ends and the caudal (tail) fin starts, from the nose (0) to the tail tip (1).")]
-        [Range(0.6f, 0.95f)] public float bodyEnd;
-        [Tooltip("Height of the tail fin relative to the body height.")]
-        [Range(0.5f, 2.5f)] public float tailSize;
-        [Tooltip("Size of the dorsal fin (0 = none).")]
-        [Range(0f, 2f)] public float dorsalFinSize;
-
-        public static FishBodyShape Predator => new FishBodyShape
-        {
-            halfHeight = 0.075f, halfWidth = 0.05f, bodyEnd = 0.88f, tailSize = 1.9f, dorsalFinSize = 1.4f,
-        };
-    }
-
     /// <summary>
     /// Fish meshes, all in the same frame so the swim shader treats them alike: the fish points along +Z, is 1 unit
     /// long and is centred on the origin.
-    /// - Species use their 3D model (<see cref="FromModel"/>).
-    /// - The predator still uses a small procedural body (<see cref="Build(FishBodyShape, int, int)"/>), with
-    ///   UV0.x = position along the body (0 = nose, 1 = tail tip) and UV0.y = height (-1 = belly, +1 = back),
-    ///   used by the shader's generated colours.
+    /// Species and the predator all use their 3D model (<see cref="FromModel"/>).
     /// </summary>
     public static class FishMeshBuilder
     {
@@ -76,113 +52,6 @@ namespace SeaSim.Fish
             if (normals.Length != vertices.Length) mesh.RecalculateNormals();
             mesh.RecalculateBounds();
             return mesh;
-        }
-
-        public static Mesh Build(FishBodyShape shape, int lengthSegments = 14, int radialSegments = 10)
-        {
-            float bodyEnd = shape.bodyEnd;
-            float halfHeight = shape.halfHeight;
-            float halfWidth = shape.halfWidth;
-
-            var vertices = new List<Vector3>();
-            var normals = new List<Vector3>();
-            var uvs = new List<Vector2>();
-            var triangles = new List<int>();
-
-            // ---- Body: a lofted ellipse whose radius follows a streamlined profile ----
-            int ringSize = radialSegments + 1;
-            for (int i = 0; i <= lengthSegments; i++)
-            {
-                float s = bodyEnd * i / lengthSegments;
-                float z = 0.5f - s;
-                float profile = BodyProfile(s, bodyEnd);
-                float slope = (BodyProfile(Mathf.Min(s + 0.01f, bodyEnd), bodyEnd) - BodyProfile(Mathf.Max(s - 0.01f, 0f), bodyEnd)) / 0.02f;
-                for (int j = 0; j <= radialSegments; j++)
-                {
-                    float a = (float)j / radialSegments * Mathf.PI * 2f;
-                    float cx = Mathf.Sin(a), cy = Mathf.Cos(a);
-                    vertices.Add(new Vector3(cx * halfWidth * profile, cy * halfHeight * profile, z));
-                    // Normal of an ellipse, slightly tilted forward/back according to the profile slope.
-                    normals.Add(new Vector3(cx / halfWidth, cy / halfHeight, slope * 1.2f).normalized);
-                    uvs.Add(new Vector2(s, cy));
-                }
-            }
-            for (int i = 0; i < lengthSegments; i++)
-            for (int j = 0; j < radialSegments; j++)
-            {
-                int a = i * ringSize + j, b = a + ringSize;
-                triangles.AddRange(new[] { a, a + 1, b, a + 1, b + 1, b });
-            }
-
-            // ---- Caudal (tail) fin: forked, flat, double-sided ----
-            float zRoot = 0.5f - (bodyEnd - 0.03f);
-            float zTip = -0.5f;
-            float zFork = 0.5f - (bodyEnd + (1f - bodyEnd) * 0.55f);
-            float tail = halfHeight * shape.tailSize;
-            AddFin(vertices, normals, uvs, triangles, halfHeight, new[]
-            {
-                new Vector3(0, halfHeight * 0.18f, zRoot),
-                new Vector3(0, tail * 1.05f, zTip - 0.02f),
-                new Vector3(0, 0, zFork),
-                new Vector3(0, -tail, zTip),
-                new Vector3(0, -halfHeight * 0.18f, zRoot),
-            });
-
-            // ---- Dorsal fin ----
-            if (shape.dorsalFinSize > 0f)
-            {
-                float d = shape.dorsalFinSize;
-                AddFin(vertices, normals, uvs, triangles, halfHeight, new[]
-                {
-                    new Vector3(0, halfHeight * 0.92f, 0.08f),
-                    new Vector3(0, halfHeight * (0.92f + 0.63f * d), -0.04f),
-                    new Vector3(0, halfHeight * 0.80f, 0.08f - 0.2f * d),
-                });
-            }
-
-            var mesh = new Mesh { name = "ProceduralFish" };
-            mesh.SetVertices(vertices);
-            mesh.SetNormals(normals);
-            mesh.SetUVs(0, uvs);
-            mesh.SetTriangles(triangles, 0);
-            mesh.RecalculateBounds();
-            // Fish bend at runtime in the shader: pad the bounds so they are never culled incorrectly.
-            var bounds = mesh.bounds;
-            bounds.Expand(0.2f);
-            mesh.bounds = bounds;
-            return mesh;
-        }
-
-        /// <summary>Thickness of the body (0..1) along s, from nose (0) to tail root.</summary>
-        static float BodyProfile(float s, float bodyEnd)
-        {
-            if (s < 0.28f)
-                return Mathf.Sqrt(Mathf.Sin(s / 0.28f * Mathf.PI * 0.5f)) * 0.98f + 0.02f; // rounded head
-            float t = Mathf.InverseLerp(0.28f, bodyEnd, s);
-            t = t * t * (3f - 2f * t);
-            return Mathf.Lerp(1f, 0.14f, t); // taper toward the caudal peduncle
-        }
-
-        /// <summary>Adds a flat polygon (in the YZ plane) as a triangle fan, with both faces.</summary>
-        static void AddFin(List<Vector3> v, List<Vector3> n, List<Vector2> uv, List<int> tris, float halfHeight, Vector3[] outline)
-        {
-            for (int side = 0; side < 2; side++)
-            {
-                int start = v.Count;
-                var normal = side == 0 ? Vector3.right : Vector3.left;
-                foreach (var p in outline)
-                {
-                    v.Add(p);
-                    n.Add(normal);
-                    uv.Add(new Vector2(Mathf.Clamp01(0.5f - p.z), Mathf.Clamp(p.y / halfHeight, -1f, 1f)));
-                }
-                for (int i = 1; i < outline.Length - 1; i++)
-                {
-                    // Outlines are given counter-clockwise as seen from +X; Unity front faces are clockwise.
-                    if (side == 0) tris.AddRange(new[] { start, start + i + 1, start + i });
-                    else tris.AddRange(new[] { start, start + i, start + i + 1 });
-                }
-            }
         }
     }
 }
