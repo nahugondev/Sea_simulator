@@ -62,4 +62,4 @@ Créer une scène sous-marine vivante et crédible, étape par étape, pour un p
 
 **Caméra :** clic droit pour regarder, ZQSD pour se déplacer, A/E pour descendre/monter, Maj pour accélérer, molette pour régler la vitesse.
 
-Les bancs sont regroupés sous l'objet `FishSchools` de la scène : chaque `FishSchool` définit une espèce et un nombre de poissons. Tous les bancs partagent une seule zone de nage, réglée sur l'objet `Enclave` (la marge où les poissons font demi-tour se règle sur `FishSimulation`). L'apparence et le comportement de chaque espèce se règlent dans son asset (`Assets/Simulation/Fish/Species/`), et le prédateur sur l'objet `Predator`.
+Les bancs sont regroupés sous l'objet `FishSchools` de la scène : chaque `FishSchool` définit une espèce et un nombre de poissons. Tous les bancs partagent une seule zone de nage, réglée sur l'objet `Enclave` (la marge où les poissons font demi-tour se règle sur `FishSimulation`). L'apparence et le comportement de chaque espèce se règlent dans son asset (`Assets/Simulation/Fish/Species/`), et les prédateurs sur l'objet `Predator`, rangé sous `Predators` (son réglage *Count* fixe le nombre de requins).

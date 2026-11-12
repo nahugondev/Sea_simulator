@@ -33,8 +33,8 @@ namespace SeaSim.Fish
         [SerializeField, Min(0.05f)] float length = 1.2f;
 
         [Header("Count")]
-        [Tooltip("Number of predators. Extra ones are copies of this one, spawned at Play at random places in the " +
-                 "swimming volume. Predators only hunt fish and keep a little distance from each other.")]
+        [Tooltip("Number of predators. Extra ones are copies of this one, spawned in Play Mode at random places in the " +
+                 "swimming volume (it can be changed while playing). Predators only hunt fish and keep a little distance from each other.")]
         [SerializeField, Range(1, 20)] int count = 1;
         [Tooltip("Distance (m) predators try to keep between each other.")]
         [SerializeField, Min(0f)] float spacing = 4f;
@@ -74,6 +74,7 @@ namespace SeaSim.Fish
         Unity.Mathematics.Random rng;
         float noiseSeed;
         readonly List<GameObject> copies = new List<GameObject>();
+        bool isCopy;
         static bool spawningCopies;
 
         public PredatorState State => new PredatorState
@@ -88,7 +89,7 @@ namespace SeaSim.Fish
             active.Add(this);
             rng = new Unity.Mathematics.Random((uint)(GetHashCode() | 1));
             noiseSeed = rng.NextFloat(0f, 1000f);
-            if (!spawningCopies) SpawnCopies();
+            if (!spawningCopies && !isCopy) SyncCopies();
             startPosition = transform.position;
             direction = math.normalizesafe((float3)transform.forward, new float3(0, 0, 1));
             speed = cruiseSpeed;
@@ -106,22 +107,39 @@ namespace SeaSim.Fish
             copies.Clear();
         }
 
-        /// <summary>Creates count - 1 copies of this predator, at random places in the swimming volume.</summary>
-        void SpawnCopies()
+        void Update()
         {
-            if (!Application.isPlaying || count <= 1) return;
+            // Count can be changed in the Inspector while playing.
+            if (!isCopy && copies.Count != count - 1) SyncCopies();
+        }
+
+        /// <summary>
+        /// Keeps count - 1 copies of this predator (Play Mode only), adding them at random places in the swimming
+        /// volume or removing the last ones. Copies are plain scene objects, visible in the Hierarchy.
+        /// </summary>
+        void SyncCopies()
+        {
+            if (!Application.isPlaying) return;
+            copies.RemoveAll(c => c == null);
+            while (copies.Count > math.max(count - 1, 0))
+            {
+                Destroy(copies[copies.Count - 1]);
+                copies.RemoveAt(copies.Count - 1);
+            }
+            if (copies.Count >= count - 1) return;
+
             Bounds area = FishSimulation.Instance != null && FishSimulation.Instance.TryGetSwimVolume(out Bounds volume)
                 ? volume : new Bounds(transform.position, new Vector3(20f, 6f, 20f));
             spawningCopies = true;
             try
             {
-                for (int i = 1; i < count; i++)
+                while (copies.Count < count - 1)
                 {
                     float3 p = (float3)area.center + (rng.NextFloat3() * 2f - 1f) * (float3)area.extents * new float3(0.6f, 0.4f, 0.6f);
                     float heading = rng.NextFloat(0f, 360f);
                     var copy = Instantiate(gameObject, p, Quaternion.Euler(0f, heading, 0f), transform.parent);
-                    copy.name = $"{name} {i + 1}";
-                    copy.hideFlags = HideFlags.DontSave;
+                    copy.name = $"{name} {copies.Count + 2}";
+                    copy.GetComponent<FishPredator>().isCopy = true;
                     copies.Add(copy);
                 }
             }
@@ -136,6 +154,9 @@ namespace SeaSim.Fish
                 Debug.LogError($"{name}: no model, or its mesh is not readable (enable Read/Write in the model's import settings).", this);
                 return;
             }
+            // A copy also duplicates the original's body: drop it, each predator builds its own.
+            for (int i = transform.childCount - 1; i >= 0; i--)
+                if (transform.GetChild(i).name == "Body") DestroyImmediate(transform.GetChild(i).gameObject);
             var go = new GameObject("Body");
             go.hideFlags = HideFlags.DontSave;
             body = go.transform;
