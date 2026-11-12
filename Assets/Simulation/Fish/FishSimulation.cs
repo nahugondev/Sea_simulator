@@ -77,6 +77,7 @@ namespace SeaSim.Fish
         // Per fish (original index)
         NativeArray<float3> positions, velocities, desiredDirections, corrections;
         NativeArray<float> scales, cruiseSpeeds, desiredSpeeds, panic, newPanic, light, newLight;
+        NativeArray<float2> temperament; // x = nervousness (0..1), y = vigor (thrust multiplier, > 1 for young fish)
         NativeArray<int> fishSpecies;
         NativeArray<byte> beating;
         NativeArray<float4> swimStates;
@@ -141,6 +142,7 @@ namespace SeaSim.Fish
         internal NativeArray<float3>.ReadOnly GetVelocities(int start, int count) => Slice(velocities, start, count);
         internal NativeArray<float>.ReadOnly GetPanic(int start, int count) => Slice(panic, start, count);
         internal NativeArray<float>.ReadOnly GetLight(int start, int count) => Slice(light, start, count);
+        internal NativeArray<float>.ReadOnly GetLengths(int start, int count) => Slice(scales, start, count);
 
         NativeArray<T>.ReadOnly Slice<T>(NativeArray<T> array, int start, int count) where T : unmanaged
         {
@@ -191,7 +193,7 @@ namespace SeaSim.Fish
                 var sp = speciesList[s];
                 speciesData[s] = sp.ToData();
                 // Body reach = largest distance at which two bodies can interact.
-                float maxLength = sp.length * (1f + sp.sizeVariation);
+                float maxLength = sp.MaxLength;
                 reach = math.max(reach, maxLength * (1f + 2f * sp.schooling.bodyRadius * math.max(1f, sp.schooling.bodyHeightRatio) + sp.schooling.personalSpace));
             }
             drawBounds = new Bounds(swimVolume.center, swimVolume.size + Vector3.one * 2f);
@@ -251,6 +253,7 @@ namespace SeaSim.Fish
                 sortedSpecies = sortedSpecies,
                 sortedLight = sortedLight,
                 cruiseSpeeds = cruiseSpeeds,
+                temperament = temperament,
                 species = speciesData,
                 volume = volumeData,
                 predators = predators,
@@ -279,6 +282,7 @@ namespace SeaSim.Fish
                 scales = scales,
                 panic = newPanic,
                 light = newLight,
+                temperament = temperament,
                 fishSpecies = fishSpecies,
                 volume = volumeData,
                 species = speciesData,
@@ -365,6 +369,7 @@ namespace SeaSim.Fish
             corrections = new NativeArray<float3>(n, Allocator.Persistent);
             scales = new NativeArray<float>(n, Allocator.Persistent);
             cruiseSpeeds = new NativeArray<float>(n, Allocator.Persistent);
+            temperament = new NativeArray<float2>(n, Allocator.Persistent);
             desiredSpeeds = new NativeArray<float>(n, Allocator.Persistent);
             panic = new NativeArray<float>(n, Allocator.Persistent);
             newPanic = new NativeArray<float>(n, Allocator.Persistent);
@@ -432,9 +437,19 @@ namespace SeaSim.Fish
             {
                 int i = start + k;
                 int c = k % clusters;
-                float length = species.length * (1f + rng.NextFloat(-species.sizeVariation, species.sizeVariation));
+                // A share of young, smaller fish; the others are adults around the standard length.
+                bool juvenile = rng.NextFloat() < species.juvenileShare;
+                float length = juvenile
+                    ? species.length * rng.NextFloat(math.min(species.juvenileSize.x, species.juvenileSize.y), math.max(species.juvenileSize.x, species.juvenileSize.y))
+                    : species.length * (1f + rng.NextFloat(-species.sizeVariation, species.sizeVariation));
                 scales[i] = length;
-                cruiseSpeeds[i] = swim.cruiseSpeed * length * (1f + rng.NextFloat(-swim.speedVariation, swim.speedVariation));
+                // Young fish cruise at the adults' speed (they would otherwise fall behind their school): in body
+                // lengths that is much faster, so they push harder (vigor) and beat their tail faster.
+                float cruiseLength = juvenile ? species.length : length;
+                cruiseSpeeds[i] = swim.cruiseSpeed * cruiseLength * (1f + rng.NextFloat(-swim.speedVariation, swim.speedVariation));
+                // Temperament: some adults calm, some restless; the young are nervous.
+                float nervousness = juvenile ? rng.NextFloat(0.6f, 1f) : rng.NextFloat() * rng.NextFloat();
+                temperament[i] = new float2(nervousness, juvenile ? species.length / length : 1f);
                 positions[i] = clusterCenters[c] + rng.NextFloat3Direction() * rng.NextFloat(0f, 3f);
                 velocities[i] = math.normalizesafe(clusterHeadings[c] + rng.NextFloat3Direction() * 0.3f) * cruiseSpeeds[i];
                 fishSpecies[i] = speciesIndex;
@@ -453,6 +468,7 @@ namespace SeaSim.Fish
             if (corrections.IsCreated) corrections.Dispose();
             if (scales.IsCreated) scales.Dispose();
             if (cruiseSpeeds.IsCreated) cruiseSpeeds.Dispose();
+            if (temperament.IsCreated) temperament.Dispose();
             if (desiredSpeeds.IsCreated) desiredSpeeds.Dispose();
             if (panic.IsCreated) panic.Dispose();
             if (newPanic.IsCreated) newPanic.Dispose();

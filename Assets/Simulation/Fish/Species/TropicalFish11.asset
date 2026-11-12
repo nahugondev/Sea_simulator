@@ -13,17 +13,13 @@ MonoBehaviour:
   m_Name: TropicalFish11
   m_EditorClassIdentifier: SeaSim.Simulation::SeaSim.Fish.FishSpecies
   material: {fileID: 2100000, guid: e6b765ee27a45a342ac2722fa29d87b1, type: 2}
-  bodyShape:
-    halfHeight: 0.115
-    halfWidth: 0.055
-    bodyEnd: 0.86
-    tailSize: 1.2
-    dorsalFinSize: 1
   model: {fileID: 6297598984381371501, guid: 3ab781d93ae26504f915fc7cee9f4c30, type: 3}
   modelForward: {x: 0, y: -1, z: 0}
   modelUp: {x: 0, y: 0, z: 1}
   length: 0.3
-  sizeVariation: 0.2
+  sizeVariation: 0.3
+  juvenileShare: 0.25
+  juvenileSize: {x: 0.2, y: 0.45}
   swimming:
     cruiseSpeed: 3
     speedVariation: 0.15
