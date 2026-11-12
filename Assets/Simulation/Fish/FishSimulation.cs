@@ -191,7 +191,7 @@ namespace SeaSim.Fish
                 var sp = speciesList[s];
                 speciesData[s] = sp.ToData();
                 // Body reach = largest distance at which two bodies can interact.
-                float maxLength = sp.length * (1f + sp.sizeVariation);
+                float maxLength = sp.MaxLength;
                 reach = math.max(reach, maxLength * (1f + 2f * sp.schooling.bodyRadius * math.max(1f, sp.schooling.bodyHeightRatio) + sp.schooling.personalSpace));
             }
             drawBounds = new Bounds(swimVolume.center, swimVolume.size + Vector3.one * 2f);
@@ -432,7 +432,11 @@ namespace SeaSim.Fish
             {
                 int i = start + k;
                 int c = k % clusters;
-                float length = species.length * (1f + rng.NextFloat(-species.sizeVariation, species.sizeVariation));
+                // A share of young, smaller fish; the others are adults around the standard length.
+                bool juvenile = rng.NextFloat() < species.juvenileShare;
+                float length = juvenile
+                    ? species.length * rng.NextFloat(math.min(species.juvenileSize.x, species.juvenileSize.y), math.max(species.juvenileSize.x, species.juvenileSize.y))
+                    : species.length * (1f + rng.NextFloat(-species.sizeVariation, species.sizeVariation));
                 scales[i] = length;
                 cruiseSpeeds[i] = swim.cruiseSpeed * length * (1f + rng.NextFloat(-swim.speedVariation, swim.speedVariation));
                 positions[i] = clusterCenters[c] + rng.NextFloat3Direction() * rng.NextFloat(0f, 3f);

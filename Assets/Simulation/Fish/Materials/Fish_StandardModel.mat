@@ -12,7 +12,8 @@ Material:
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
-  m_InvalidKeywords: []
+  m_InvalidKeywords:
+  - _USEBASEMAP_ON
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 1
   m_DoubleSidedGI: 0
@@ -31,13 +32,16 @@ Material:
     m_Floats:
     - _BackBarCount: 0
     - _BackBarStrength: 0.8
+    - _ColorVariation: 0.7
     - _HeadAmplitude: 0.012
+    - _ShapeVariation: 0.5
     - _Sheen: 0.6
     - _Smoothness: 0.75
     - _SwimAmplitude: 0.07
     - _SwimFrequency: 2.2
     - _UseBaseMap: 1
     - _WaveCount: 0.9
+    - _WearAmount: 0.7
     m_Colors:
     - _BackBarColor: {r: 0.03, g: 0.059999965, b: 0.079999976, a: 1}
     - _BackColor: {r: 0.06, g: 0.16, b: 0.42, a: 1}

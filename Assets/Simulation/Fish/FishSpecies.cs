@@ -23,7 +23,16 @@ namespace SeaSim.Fish
         public Vector3 modelUp = Vector3.up;
         [Tooltip("Average fish length in metres.")]
         [Min(0.01f)] public float length = 0.3f;
+        [Tooltip("Size difference between adults (fraction of the length, both ways).")]
         [Range(0f, 0.5f)] public float sizeVariation = 0.2f;
+        [Tooltip("Share of young fish in each school. Everything is set in body lengths (speed, spacing, collisions), " +
+                 "so smaller fish automatically swim slower and keep smaller gaps.")]
+        [Range(0f, 1f)] public float juvenileShare = 0.25f;
+        [Tooltip("Size range of the young fish, as a fraction of the standard length (min, max).")]
+        public Vector2 juvenileSize = new Vector2(0.3f, 0.45f);
+
+        /// <summary>Length (m) of the largest fish this species can have.</summary>
+        public float MaxLength => length * Mathf.Max(1f + sizeVariation, juvenileSize.y);
 
         public SwimSettings swimming = SwimSettings.Default;
         public BoidSettings schooling = BoidSettings.Default;
