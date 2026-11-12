@@ -19,7 +19,7 @@ MonoBehaviour:
   length: 0.3
   sizeVariation: 0.3
   juvenileShare: 0.25
-  juvenileSize: {x: 0.15, y: 0.45}
+  juvenileSize: {x: 0.2, y: 0.45}
   swimming:
     cruiseSpeed: 3
     speedVariation: 0.15

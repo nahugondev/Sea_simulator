@@ -89,6 +89,7 @@ namespace SeaSim.Fish
         [ReadOnly] public NativeArray<int> sortedSpecies;
         [ReadOnly] public NativeArray<float> sortedLight;
         [ReadOnly] public NativeArray<float> cruiseSpeeds;     // original index
+        [ReadOnly] public NativeArray<float2> temperament;     // original index: x = nervousness, y = vigor
         [ReadOnly] public NativeArray<SpeciesData> species;
         public SwimVolumeData volume;
         public SchoolLightData schoolLight;
@@ -289,20 +290,23 @@ namespace SeaSim.Fish
                 math.lerp(oldLight, lightTarget, math.saturate(deltaTime * schoolLight.response)));
 
             // ---- Desired speed: own cruising speed, matched to neighbours, boosted by panic ----
-            float burst = swim.burstSpeed * lengthI;
+            float2 temper = temperament[i];
+            float burst = swim.burstSpeed * lengthI * temper.y;
             float desiredSpeed = math.lerp(cruiseSpeeds[i], burst, p01);
             if (count > 0)
                 desiredSpeed = math.lerp(desiredSpeed, neighbourSpeed / count, boids.speedMatching * (1f - p01));
             desiredSpeed = math.clamp(desiredSpeed, swim.minSpeed * lengthI, burst);
 
             // ---- Steering ----
-            float maxSteer = boids.maxSteerForce * lengthI * (1f + 2f * p01);
+            // Young fish swim at adult speed, so they also need adult-like steering force (vigor).
+            float maxSteer = boids.maxSteerForce * lengthI * temper.y * (1f + 2f * p01);
             float3 accel = 0;
             if (count > 0)
             {
                 accel += SteerTowards(v, alignment, desiredSpeed, maxSteer) * boids.alignmentWeight * (1f + p01);
                 accel += SteerTowards(v, cohesion / count - p, desiredSpeed, maxSteer)
-                         * boids.cohesionWeight * (1f - escape.cohesionDrop * p01);
+                         * boids.cohesionWeight * (1f - escape.cohesionDrop * p01)
+                         * (1f + math.saturate(temper.y - 1f) * 0.8f); // the young stay close to the group
             }
             if (math.lengthsq(separation) > 0f)
                 accel += SteerTowards(v, separation, desiredSpeed, maxSteer) * boids.separationWeight * math.min(math.length(separation), 2f);
@@ -326,7 +330,11 @@ namespace SeaSim.Fish
                 noise.snoise(q),
                 noise.snoise(q + new float4(31.4f, 0, 0, 0)) * 0.35f,
                 noise.snoise(q + new float4(0, 0, 71.9f, 0)));
-            accel += wander * boids.wanderWeight * boids.maxSteerForce * lengthI;
+            // Nervous fish (young ones especially) wander more and faster: small, jittery changes of course.
+            float nervous = temper.x;
+            float4 q2 = new float4(p * 0.3f, time * (0.6f + 1.2f * nervous) + i * 0.71f);
+            float3 jitter = new float3(noise.snoise(q2), noise.snoise(q2 + new float4(13.7f, 0, 0, 0)) * 0.4f, noise.snoise(q2 + new float4(0, 0, 47.1f, 0)));
+            accel += (wander * (0.6f + 2.5f * nervous) + jitter * nervous * 10f) * boids.wanderWeight * boids.maxSteerForce * lengthI * temper.y;
 
             accel = ClampLength(accel, maxSteer);
             desiredDirections[i] = math.normalizesafe(v + accel * deltaTime, forward);
@@ -443,6 +451,7 @@ namespace SeaSim.Fish
         [ReadOnly] public NativeArray<float> scales;
         [ReadOnly] public NativeArray<float> panic;
         [ReadOnly] public NativeArray<float> light;
+        [ReadOnly] public NativeArray<float2> temperament;   // x = nervousness (0..1), y = vigor (thrust multiplier)
         [ReadOnly] public NativeArray<int> fishSpecies;
         public SwimVolumeData volume;
         [ReadOnly] public NativeArray<SpeciesData> species;
@@ -485,9 +494,11 @@ namespace SeaSim.Fish
             else if (!beat && speed <= desired * (1f - swim.glideBand)) beat = true;
             beating[i] = (byte)(beat ? 1 : 0);
 
-            if (beat) speed += swim.thrustAcceleration * L * (1f + 2f * p01) * deltaTime;
+            // Young fish push harder (vigor) to keep up with the adults of their school.
+            float2 temper = temperament[i];
+            if (beat) speed += swim.thrustAcceleration * L * temper.y * (1f + 2f * p01) * deltaTime;
             else speed -= speed * swim.glideDrag * deltaTime;
-            speed = math.clamp(speed, swim.minSpeed * L, swim.burstSpeed * L);
+            speed = math.clamp(speed, swim.minSpeed * L, swim.burstSpeed * L * temper.y);
 
             float3 v = dir * speed;
             float3 p = positions[i] + v * deltaTime + corrections[i];
@@ -500,7 +511,10 @@ namespace SeaSim.Fish
             // ---- Swim state for the shader: tail phase and effort (amplitude) ----
             float4 s = swimStates[i];
             s.y = math.lerp(s.y, beat ? 1f : GlideEffort, math.saturate(deltaTime * 8f));
-            float tailBeatsPerSecond = speed / math.max(swim.strideLength * L, 1e-3f);
+            // Distance per beat is in body lengths, so a small fish keeping up with adults beats faster (its stroke
+            // is relatively longer, sqrt(vigor), so about twice as fast rather than in proportion to its size);
+            // nervous fish take shorter, quicker strokes.
+            float tailBeatsPerSecond = speed / math.max(swim.strideLength * L * math.sqrt(temper.y), 1e-3f) * (0.85f + 0.4f * temper.x);
             s.x += TwoPi * tailBeatsPerSecond * math.lerp(0.4f, 1f, s.y) * deltaTime;
             s.x -= TwoPi * math.floor(s.x / TwoPi);
             s.z = light[i]; // light reaching the fish inside its school (1 = full)
