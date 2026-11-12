@@ -63,6 +63,7 @@ Shader "SeaSim/EnclaveTriplanar"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             #include "EnvironmentNoise.hlsl"
+            #include "../../Water/Shaders/Caustics.hlsl"
 
             TEXTURE2D(_BaseMap);      SAMPLER(sampler_BaseMap);
             TEXTURE2D(_NormalMap);    SAMPLER(sampler_NormalMap);
@@ -207,6 +208,13 @@ Shader "SeaSim/EnclaveTriplanar"
                 surface.alpha = 1;
 
                 half4 color = UniversalFragmentPBR(inputData, surface);
+
+                // Caustics: extra sunlight focused by the surface waves, only where the sun reaches (shadows).
+                Light sun = GetMainLight(inputData.shadowCoord);
+                half sunFacing = saturate(dot(n, sun.direction));
+                color.rgb += albedo * sun.color * (sunFacing * sun.shadowAttenuation * occlusion)
+                           * Caustics(p, sun.direction);
+
                 color.rgb = MixFog(color.rgb, i.fogFactor);
                 return half4(color.rgb, 1);
             }

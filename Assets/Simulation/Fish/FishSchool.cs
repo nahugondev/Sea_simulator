@@ -50,6 +50,8 @@ namespace SeaSim.Fish
         public NativeArray<float3>.ReadOnly Velocities => FishSimulation.Instance.GetVelocities(startIndex, simulatedCount);
         /// <summary>Per-fish panic level, 0 (calm) to 1 (fleeing).</summary>
         public NativeArray<float>.ReadOnly Panic => FishSimulation.Instance.GetPanic(startIndex, simulatedCount);
+        /// <summary>Per-fish share of the sunlight reaching it inside its school, 1 (full) down to the minimum.</summary>
+        public NativeArray<float>.ReadOnly Light => FishSimulation.Instance.GetLight(startIndex, simulatedCount);
 
         /// <summary>Changes the number of fish; all schools are re-spawned on the next Update.</summary>
         public void SetFishCount(int count)
