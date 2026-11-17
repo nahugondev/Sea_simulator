@@ -50,6 +50,11 @@ namespace SeaSim.Fish
         /// the steering cost while the counting sort over 8x more cells costs more, so 1 is faster at every fish count.
         /// </summary>
         const int ReachCells = 1;
+        /// <summary>
+        /// Radius of each spawn cluster, in body lengths of the species: every species starts at about the same
+        /// density relative to its size (~2.5 BL between neighbours), so small fish do not start scattered.
+        /// </summary>
+        const float SpawnRadiusBL = 10f;
         static readonly int SwimStateId = Shader.PropertyToID("_FishSwimState");
         static readonly int InstanceOffsetId = Shader.PropertyToID("_FishInstanceOffset");
 
@@ -454,7 +459,7 @@ namespace SeaSim.Fish
                 // Temperament: some adults calm, some restless; the young are nervous.
                 float nervousness = juvenile ? rng.NextFloat(0.6f, 1f) : rng.NextFloat() * rng.NextFloat();
                 temperament[i] = new float2(nervousness, juvenile ? species.length / length : 1f);
-                positions[i] = clusterCenters[c] + rng.NextFloat3Direction() * rng.NextFloat(0f, 3f);
+                positions[i] = clusterCenters[c] + rng.NextFloat3Direction() * rng.NextFloat(0f, SpawnRadiusBL * species.length);
                 velocities[i] = math.normalizesafe(clusterHeadings[c] + rng.NextFloat3Direction() * 0.3f) * cruiseSpeeds[i];
                 fishSpecies[i] = speciesIndex;
                 beating[i] = (byte)(rng.NextBool() ? 1 : 0);

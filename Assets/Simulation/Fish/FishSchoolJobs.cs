@@ -256,7 +256,7 @@ namespace SeaSim.Fish
                 var pr = predators[n];
                 float3 d = p - pr.position;
                 float dist = math.length(d);
-                float detect = escape.alarmDistance * lengthI + pr.length * 0.5f;
+                float detect = escape.alarmRange + pr.length * 0.5f;
                 if (dist >= detect || dist < 1e-4f) continue;
 
                 float closeness = 1f - dist / detect;

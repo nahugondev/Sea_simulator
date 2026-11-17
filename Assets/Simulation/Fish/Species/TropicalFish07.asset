@@ -16,7 +16,7 @@ MonoBehaviour:
   model: {fileID: 8499908474687770080, guid: 6d6ef3847b33aa1429db606494824e74, type: 3}
   modelForward: {x: 0, y: -1, z: 0}
   modelUp: {x: 0, y: 0, z: 1}
-  length: 0.3
+  length: 0.07
   sizeVariation: 0.3
   juvenileShare: 0.25
   juvenileSize: {x: 0.2, y: 0.45}
@@ -51,7 +51,7 @@ MonoBehaviour:
     otherSpeciesDistance: 2.5
     otherSpeciesWeight: 2.5
   escape:
-    alarmDistance: 12
+    alarmRange: 4
     alarmTransmission: 0.9
     alarmSpreadRate: 12
     panicDecayTime: 2.5
