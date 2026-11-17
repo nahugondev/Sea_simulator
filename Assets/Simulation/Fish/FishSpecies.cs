@@ -166,8 +166,9 @@ namespace SeaSim.Fish
     [System.Serializable]
     public struct EscapeSettings
     {
-        [Tooltip("Distance (BL) at which a fish notices a predator.")]
-        [Min(0f)] public float alarmDistance;
+        [Tooltip("Distance (m) from the predator's body at which a fish notices it. In metres, not body lengths: the " +
+                 "predator's size and silhouette, not the prey's size, set how far away it can be seen.")]
+        [Min(0f)] public float alarmRange;
         [Tooltip("Fraction of a neighbour's panic passed on (must be < 1 so the alarm dies out).")]
         [Range(0f, 0.99f)] public float alarmTransmission;
         [Tooltip("How fast panic rises when neighbours panic (1/s). Sets the speed of the escape wave.")]
@@ -180,7 +181,7 @@ namespace SeaSim.Fish
 
         public static EscapeSettings Default => new EscapeSettings
         {
-            alarmDistance = 12f,
+            alarmRange = 4f,
             alarmTransmission = 0.9f,
             alarmSpreadRate = 12f,
             panicDecayTime = 2.5f,

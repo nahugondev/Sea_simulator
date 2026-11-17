@@ -34,6 +34,7 @@ Créer une scène sous-marine vivante et crédible, étape par étape, pour un p
 - Calcul en parallèle avec le **C# Job System** et **Burst**, avec une grille spatiale triée pour trouver les voisins rapidement
 - Affichage de tous les poissons en quelques appels grâce au **GPU instancing**
 - Nage animée directement dans le shader, pilotée par la simulation
+- **Tailles réalistes** : chaque espèce a la longueur typique d'un adulte de l'espèce reconnue sur son modèle (de 7 cm pour une demoiselle à 30 cm pour un chirurgien voilier), et le requin celle d'un requin de récif (1,6 m). Les poissons repèrent le requin à quelques mètres, quelle que soit leur taille
 - Vrais modèles 3D texturés : l'ondulation de la nage est appliquée par le shader, et chaque modèle est réorienté et mis à l'échelle automatiquement
 
 ## Enclave

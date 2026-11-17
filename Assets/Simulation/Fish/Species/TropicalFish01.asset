@@ -51,7 +51,7 @@ MonoBehaviour:
     otherSpeciesDistance: 2.5
     otherSpeciesWeight: 2.5
   escape:
-    alarmDistance: 12
+    alarmRange: 4
     alarmTransmission: 0.9
     alarmSpreadRate: 12
     panicDecayTime: 2.5

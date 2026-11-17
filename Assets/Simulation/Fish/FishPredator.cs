@@ -29,8 +29,8 @@ namespace SeaSim.Fish
         [SerializeField] Vector3 modelForward = Vector3.forward;
         [Tooltip("Direction of the back (dorsal side), in the model's own mesh space.")]
         [SerializeField] Vector3 modelUp = Vector3.up;
-        [Tooltip("Length in metres.")]
-        [SerializeField, Min(0.05f)] float length = 1.2f;
+        [Tooltip("Length in metres. Reef sharks such as the blacktip are typically 1.5-1.8 m long.")]
+        [SerializeField, Min(0.05f)] float length = 1.6f;
 
         [Header("Count")]
         [Tooltip("Number of predators. Extra ones are copies of this one, spawned in Play Mode at random places in the " +
