@@ -55,6 +55,10 @@ namespace SeaSim.Fish
 
         static FishSimulation instance;
 
+        // Domain reload is off when entering Play Mode, so statics survive from one session to the next: reset them.
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics() => instance = null;
+
         /// <summary>The scene's simulation, created on demand.</summary>
         public static FishSimulation Instance
         {

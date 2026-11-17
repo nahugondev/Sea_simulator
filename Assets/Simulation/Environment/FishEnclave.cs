@@ -83,6 +83,10 @@ namespace SeaSim.Environment
         static readonly List<FishEnclave> active = new List<FishEnclave>();
         public static IReadOnlyList<FishEnclave> Active => active;
 
+        // Domain reload is off when entering Play Mode, so statics survive from one session to the next: reset them.
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics() => active.Clear();
+
         /// <summary>The volume fish swim in (world space).</summary>
         public Bounds SwimVolume => new Bounds(transform.position, swimSize);
 
