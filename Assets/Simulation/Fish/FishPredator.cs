@@ -77,6 +77,14 @@ namespace SeaSim.Fish
         bool isCopy;
         static bool spawningCopies;
 
+        // Domain reload is off when entering Play Mode, so statics survive from one session to the next: reset them.
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            active.Clear();
+            spawningCopies = false;
+        }
+
         public PredatorState State => new PredatorState
         {
             position = transform.position,

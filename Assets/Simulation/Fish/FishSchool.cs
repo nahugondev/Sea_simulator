@@ -19,6 +19,10 @@ namespace SeaSim.Fish
         /// <summary>All enabled schools (used by predators to find prey).</summary>
         public static IReadOnlyList<FishSchool> Active => active;
 
+        // Domain reload is off when entering Play Mode, so statics survive from one session to the next: reset them.
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics() => active.Clear();
+
         [SerializeField] FishSpecies species;
 
         [Header("Population")]
