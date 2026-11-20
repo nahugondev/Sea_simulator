@@ -44,7 +44,8 @@ namespace SeaSim.Fish
         internal int StartIndex => startIndex;
         public uint Seed => seed;
         public int SpawnClusters => spawnClusters;
-        public ShadowCastingMode CastShadows => castShadows;
+        /// <summary>Whether this school's fish cast shadows (can be changed at runtime, e.g. by the benchmark).</summary>
+        public ShadowCastingMode CastShadows { get => castShadows; set => castShadows = value; }
 
         /// <summary>Simulation time of the whole simulation (all schools), see <see cref="FishSimulation.LastSimulationMilliseconds"/>.</summary>
         public float LastSimulationMilliseconds => FishSimulation.Instance.LastSimulationMilliseconds;

@@ -36,6 +36,7 @@ Créer une scène sous-marine vivante et crédible, étape par étape, pour un p
 - Nage animée directement dans le shader, pilotée par la simulation
 - **Tailles réalistes** : chaque espèce a la longueur typique d'un adulte de l'espèce reconnue sur son modèle (de 7 cm pour une demoiselle à 30 cm pour un chirurgien voilier), et le requin celle d'un requin de récif (1,6 m). Les poissons repèrent le requin à quelques mètres, quelle que soit leur taille
 - Vrais modèles 3D texturés : l'ondulation de la nage est appliquée par le shader, et chaque modèle est réorienté et mis à l'échelle automatiquement
+- **Ombres légères** : les ombres des poissons sont calculées avec une version simplifiée de chaque modèle (environ 3,5 fois moins de triangles, générée par Unity), et les bords des ombres sont adoucis. Avec 20 000 poissons, une image prend environ 3,7 ms au GPU au lieu de 5 ms (RTX 5070 Ti, 1080p)
 
 ## Enclave
 
@@ -66,3 +67,5 @@ Créer une scène sous-marine vivante et crédible, étape par étape, pour un p
 Les bancs sont regroupés sous l'objet `FishSchools` de la scène : chaque `FishSchool` définit une espèce et un nombre de poissons. Tous les bancs partagent une seule zone de nage, réglée sur l'objet `Enclave` (la marge où les poissons font demi-tour se règle sur `FishSimulation`). L'apparence et le comportement de chaque espèce se règlent dans son asset (`Assets/Simulation/Fish/Species/`), et les prédateurs sur l'objet `Predator`, rangé sous `Predators` (son réglage *Count* fixe le nombre de requins).
 
 La scène principale est `Assets/Scenes/Reef.unity`. Des tests automatiques (grille spatiale, mise en forme des modèles de poissons) se lancent depuis *Window > General > Test Runner*, onglet *EditMode*.
+
+**Mesurer les performances :** dans un build Windows de la scène, lancer `SeaSim.exe -fishbench 12550,20000 -benchout resultats.csv`. Pour chaque nombre de poissons, le benchmark mesure le temps CPU et GPU par image et le temps de simulation, avec tout activé puis en coupant chaque réglage tour à tour (ombres, cascades, SSAO, eau). Ajouter `-benchshots dossier` enregistre en plus une capture de la même image pour chaque réglage d'ombres.
