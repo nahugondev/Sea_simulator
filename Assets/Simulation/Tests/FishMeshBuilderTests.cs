@@ -63,6 +63,34 @@ namespace SeaSim.Tests
             finally { Object.DestroyImmediate(mesh); }
         }
 
+        /// <summary>The shadow mesh (a lower level of detail) must land exactly where the full mesh does, with fewer triangles.</summary>
+        [Test]
+        public void FromModel_LodSharesTheFrameWithFewerTriangles()
+        {
+            var sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            var mesh = Object.Instantiate(sphere.GetComponent<MeshFilter>().sharedMesh);
+            Object.DestroyImmediate(sphere);
+            mesh.vertices = System.Array.ConvertAll(mesh.vertices, v => new Vector3(v.x * 0.3f, v.y * 0.6f, v.z * 2f));
+            UnityEditor.MeshLodUtility.GenerateMeshLods(mesh, default, 8);
+            Assume.That(mesh.lodCount, Is.GreaterThan(2));
+            model = new GameObject("Model with LODs");
+            model.AddComponent<MeshFilter>().sharedMesh = mesh;
+
+            var full = FishMeshBuilder.FromModel(model, Vector3.forward, Vector3.up);
+            var light = FishMeshBuilder.FromModel(model, Vector3.forward, Vector3.up, 2);
+            try
+            {
+                Assert.Less(light.triangles.Length, full.triangles.Length / 2);
+                Assert.AreEqual(full.bounds.center, light.bounds.center);
+                Assert.AreEqual(full.bounds.size, light.bounds.size);
+            }
+            finally
+            {
+                Object.DestroyImmediate(full);
+                Object.DestroyImmediate(light);
+            }
+        }
+
         [Test]
         public void FromModel_ReturnsNullWithoutMesh()
         {

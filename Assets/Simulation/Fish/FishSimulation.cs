@@ -4,6 +4,7 @@ using Unity.Jobs;
 using Unity.Mathematics;
 using SeaSim.Environment;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace SeaSim.Fish
 {
@@ -39,6 +40,13 @@ namespace SeaSim.Fish
         [SerializeField, Min(0.1f)] float lightResponse = 3f;
         [Tooltip("Darkest a fish can get inside a school (fraction of full light).")]
         [SerializeField, Range(0f, 1f)] float minimumLight = 0.4f;
+
+        [Header("Rendering")]
+        [Tooltip("Level of detail of the mesh drawn into the shadow maps (0 = full model). In a shadow map a fish covers " +
+                 "a few texels and only its silhouette matters, so a simplified mesh casts the same shadow for a fraction " +
+                 "of the cost; the full model is still drawn on screen. Needs 'Generate Mesh LODs' in the model's import " +
+                 "settings, otherwise the full model is used.")]
+        [SerializeField, Range(0, 4)] int shadowLod = 2;
 
         bool missingEnclaveWarned;
         Bounds drawBounds;
@@ -79,6 +87,9 @@ namespace SeaSim.Fish
         readonly List<FishSchool> schools = new List<FishSchool>();
         readonly List<FishSpecies> speciesList = new List<FishSpecies>();
         readonly Dictionary<FishSpecies, Mesh> meshes = new Dictionary<FishSpecies, Mesh>();
+        // Simplified mesh drawn only into the shadow maps (null when the model has no levels of detail).
+        readonly Dictionary<FishSpecies, Mesh> shadowMeshes = new Dictionary<FishSpecies, Mesh>();
+        int shadowMeshesLod = -1;
         readonly List<MaterialPropertyBlock[]> schoolBatchProperties = new List<MaterialPropertyBlock[]>();
         bool dirty = true;
         int fishCount;
@@ -114,6 +125,28 @@ namespace SeaSim.Fish
         public float LastSimulationMilliseconds { get; private set; }
         public int FishCount => fishCount;
         public int SpeciesCount => speciesList.Count;
+
+        /// <summary>Level of detail of the mesh drawn into the shadow maps (0 = full model). Can be changed at runtime.</summary>
+        public int ShadowLod { get => shadowLod; set => shadowLod = value; }
+
+        /// <summary>
+        /// The species' shadow mesh (built on first use, rebuilt when <see cref="ShadowLod"/> changes, e.g. in the
+        /// Inspector), or null when its model has no levels of detail.
+        /// </summary>
+        Mesh ShadowMesh(FishSpecies species)
+        {
+            if (shadowMeshesLod != shadowLod)
+            {
+                foreach (var old in shadowMeshes.Values) if (old != null) Destroy(old);
+                shadowMeshes.Clear();
+                shadowMeshesLod = shadowLod;
+            }
+            if (shadowMeshes.TryGetValue(species, out var mesh)) return mesh;
+            bool hasLods = shadowLod > 0 && FishMeshBuilder.LodCount(species.model) > 1;
+            mesh = hasLods ? FishMeshBuilder.Build(species, shadowLod) : null;
+            shadowMeshes[species] = mesh;
+            return mesh;
+        }
         public float VolumeMargin => volumeMargin;
 
         /// <summary>The enclave fish swim in (the one assigned, otherwise the scene's), or null if there is none.</summary>
@@ -175,6 +208,8 @@ namespace SeaSim.Fish
             retiredSwimBuffer = null;
             foreach (var mesh in meshes.Values) if (mesh != null) Destroy(mesh);
             meshes.Clear();
+            foreach (var mesh in shadowMeshes.Values) if (mesh != null) Destroy(mesh);
+            shadowMeshes.Clear();
             if (instance == this) instance = null;
         }
 
@@ -331,20 +366,27 @@ namespace SeaSim.Fish
                 var material = school.Species.material;
                 if (material == null || school.FishCount == 0) continue;
                 if (!meshes.TryGetValue(school.Species, out var mesh) || mesh == null) continue;
+                // With a simplified shadow mesh, the full mesh is drawn on screen only and the light one in shadows only.
+                var shadowMesh = ShadowMesh(school.Species);
+                bool splitShadows = shadowMesh != null && school.CastShadows != ShadowCastingMode.Off;
                 var batches = schoolBatchProperties[p];
                 for (int b = 0; b < batches.Length; b++)
                 {
                     int first = school.StartIndex + b * MaxInstancesPerDraw;
+                    int count = math.min(MaxInstancesPerDraw, school.StartIndex + school.FishCount - first);
                     var rp = new RenderParams(material)
                     {
                         worldBounds = drawBounds,
-                        shadowCastingMode = school.CastShadows,
+                        shadowCastingMode = splitShadows ? ShadowCastingMode.Off : school.CastShadows,
                         receiveShadows = true,
                         layer = school.gameObject.layer,
                         matProps = batches[b],
                     };
-                    int count = math.min(MaxInstancesPerDraw, school.StartIndex + school.FishCount - first);
-                    Graphics.RenderMeshInstanced(rp, mesh, 0, matrices, count, first);
+                    if (school.CastShadows != ShadowCastingMode.ShadowsOnly || !splitShadows)
+                        Graphics.RenderMeshInstanced(rp, mesh, 0, matrices, count, first);
+                    if (!splitShadows) continue;
+                    rp.shadowCastingMode = ShadowCastingMode.ShadowsOnly;
+                    Graphics.RenderMeshInstanced(rp, shadowMesh, 0, matrices, count, first);
                 }
             }
         }
